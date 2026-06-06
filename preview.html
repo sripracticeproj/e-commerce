@@ -1,0 +1,2320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enterprise Multi-Tenant AI-Commerce Engine - Interactive Console</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    /* Global Styles */
+    body {
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      background-color: #09090b;
+    }
+    
+    /* Scrollbar style */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Live Sync Transitions */
+    .storefront-container {
+      transition: background-color 0.4s ease, border-radius 0.4s ease;
+    }
+
+    /* Micro-animations */
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .animate-pulse-slow {
+      animation: pulse-slow 3s infinite;
+    }
+    
+    @keyframes slide-in {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+    .animate-slide-in {
+      animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes scale-up {
+      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-scale-up {
+      animation: scale-up 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    
+    .chat-bubble-assistant {
+      border-bottom-left-radius: 2px;
+    }
+    .chat-bubble-user {
+      border-bottom-right-radius: 2px;
+    }
+  </style>
+</head>
+<body class="text-zinc-100 flex flex-col h-screen select-none">
+
+  <!-- TOP MULTI-TENANT CONTROL PANEL -->
+  <header class="h-16 bg-zinc-900 border-b border-zinc-800 px-6 flex items-center justify-between z-30 shrink-0">
+    <div class="flex items-center space-x-6">
+      <div class="flex items-center space-x-2.5">
+        <span class="w-3.5 h-3.5 bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-full shadow-[0_0_12px_rgba(52,211,153,0.4)]"></span>
+        <span class="font-extrabold text-sm tracking-wider bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent uppercase">AI-Commerce Enterprise</span>
+      </div>
+
+      <div class="h-5 w-px bg-zinc-800"></div>
+
+      <!-- Role Switcher -->
+      <div class="flex items-center bg-zinc-950 border border-zinc-850 rounded-lg p-0.5 text-xs font-semibold">
+        <button onclick="switchRole('super_user')" id="btn-role-superuser" class="px-2.5 py-1 rounded bg-emerald-500 text-zinc-950 font-bold transition">
+          Super User
+        </button>
+        <button onclick="switchRole('merchant_admin')" id="btn-role-merchantadmin" class="px-2.5 py-1 rounded text-zinc-400 font-bold hover:text-zinc-200 transition">
+          Merchant Admin
+        </button>
+      </div>
+
+      <div id="tenant-divider" class="h-5 w-px bg-zinc-800"></div>
+
+      <!-- Tenant Workspace Swapper -->
+      <div id="tenant-select-container" class="flex items-center space-x-3">
+        <span class="text-xs text-zinc-400 font-medium flex items-center">
+          <i data-lucide="layers" class="w-3.5 h-3.5 mr-1.5 text-zinc-500"></i> Active Tenant Partition:
+        </span>
+        <select id="tenant-select" onchange="switchTenant(this.value)" class="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-emerald-400 font-semibold focus:outline-none focus:border-emerald-500 cursor-pointer">
+          <!-- Populated by JS -->
+        </select>
+      </div>
+    </div>
+
+    <!-- Onboard Instantly Header Actions -->
+    <div class="flex items-center space-x-4">
+      <button onclick="triggerPreviewStorefront()" class="flex items-center space-x-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-750 text-zinc-200 text-xs font-extrabold px-4 py-2 rounded-lg transition duration-200 shadow-md">
+        <i data-lucide="external-link" class="w-3.5 h-3.5 text-zinc-400"></i>
+        <span>Preview Storefront</span>
+      </button>
+
+      <button id="header-onboard-btn" onclick="openOnboardModal()" class="flex items-center space-x-1.5 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 text-xs font-extrabold px-4 py-2 rounded-lg transition duration-200 shadow-md">
+        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+        <span>Onboard Merchant Instantly</span>
+      </button>
+
+      <span class="bg-zinc-800 border border-zinc-750 text-zinc-400 font-mono text-[10px] px-3 py-1.5 rounded-lg flex items-center">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
+        <span id="rls-label-text">Super User RLS Override</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- WORKSPACE WRAPPER -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- LEFT HALF: MERCHANT MANAGEMENT CONSOLE -->
+    <section id="left-workspace" class="w-1/2 h-full flex bg-zinc-950 border-r border-zinc-800 overflow-hidden flex-col">
+      <div class="h-10 bg-zinc-900/60 px-6 border-b border-zinc-800 flex items-center justify-between text-xs text-zinc-400 shrink-0">
+        <span class="font-semibold text-zinc-300 flex items-center">
+          <i data-lucide="sliders" class="w-3.5 h-3.5 mr-2 text-emerald-500"></i> Merchant Dashboard Console
+        </span>
+        <span class="font-mono text-[10px] text-zinc-500 bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800" id="console-partition-label">
+          partition: m1-solara-wellness
+        </span>
+      </div>
+
+      <div class="flex-1 flex overflow-hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="w-48 bg-zinc-900 border-r border-zinc-800 shrink-0 p-3 space-y-1">
+          <button onclick="showTab('analytics')" id="btn-tab-analytics" class="w-full flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition text-emerald-400 bg-zinc-800/80">
+            <i data-lucide="bar-chart-2" class="w-4 h-4 mr-2.5"></i> Business Reports
+          </button>
+          <button onclick="showTab('branding')" id="btn-tab-branding" class="w-full flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200">
+            <i data-lucide="palette" class="w-4 h-4 mr-2.5"></i> Branding Customizer
+          </button>
+          <button onclick="showTab('navigation')" id="btn-tab-navigation" class="w-full flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200">
+            <i data-lucide="link" class="w-4 h-4 mr-2.5"></i> Navigation Links
+          </button>
+          <button onclick="showTab('layout')" id="btn-tab-layout" class="w-full flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200">
+            <i data-lucide="layout-template" class="w-4 h-4 mr-2.5"></i> Page Layout Design
+          </button>
+          <button onclick="showTab('products')" id="btn-tab-products" class="w-full flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200">
+            <i data-lucide="shopping-bag" class="w-4 h-4 mr-2.5"></i> Product Catalog
+          </button>
+          <button onclick="showTab('orders')" id="btn-tab-orders" class="w-full flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200">
+            <i data-lucide="receipt" class="w-4 h-4 mr-2.5"></i> Order History
+          </button>
+          <button onclick="showTab('customers')" id="btn-tab-customers" class="w-full flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200">
+            <i data-lucide="users" class="w-4 h-4 mr-2.5"></i> Customer Details
+          </button>
+          <button onclick="showTab('platform')" id="btn-tab-platform" class="w-full flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200">
+            <i data-lucide="shield" class="w-4 h-4 mr-2.5"></i> Platform Configs
+          </button>
+          <button onclick="showTab('gateways')" id="btn-tab-gateways" class="w-full flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200">
+            <i data-lucide="credit-card" class="w-4 h-4 mr-2.5"></i> Payment Gateways
+          </button>
+        </aside>
+
+        <!-- Tab Workspaces -->
+        <main class="flex-1 overflow-y-auto p-6" id="dashboard-tab-content">
+          
+          <!-- TAB: ANALYTICS -->
+          <div id="tab-analytics" class="space-y-6">
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center">
+                <i data-lucide="presentation" class="w-5 h-5 mr-2 text-emerald-400"></i> Business Intelligence
+              </h3>
+              <p class="text-xs text-zinc-400 mt-1">Calculated time-bucket metrics isolated via postgres tenant constraints.</p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                <div class="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Total Revenue</div>
+                <div class="text-2xl font-extrabold text-emerald-400 mt-1" id="stat-revenue">$0.00</div>
+                <div class="text-[9px] text-zinc-500 mt-1">Simulated payments captured</div>
+              </div>
+              <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                <div class="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Conversion Rate</div>
+                <div class="text-2xl font-extrabold text-indigo-400 mt-1" id="stat-conversion">0.00%</div>
+                <div class="text-[9px] text-zinc-500 mt-1">Completed orders / sessions</div>
+              </div>
+              <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                <div class="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Average Order Value (AOV)</div>
+                <div class="text-2xl font-extrabold text-amber-400 mt-1" id="stat-aov">$0.00</div>
+                <div class="text-[9px] text-zinc-500 mt-1">Revenue divided by order count</div>
+              </div>
+              <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                <div class="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Store Sessions</div>
+                <div class="text-2xl font-extrabold text-pink-400 mt-1" id="stat-sessions">0</div>
+                <div class="text-[9px] text-zinc-500 mt-1">Unique visitor sessions tracked</div>
+              </div>
+            </div>
+
+            <!-- Revenue Trend Chart -->
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-zinc-300">Revenue Stream Activity</span>
+                <span class="text-[9px] bg-emerald-950 text-emerald-400 border border-emerald-900 px-2 py-0.5 rounded-full">Realtime Feed</span>
+              </div>
+              <!-- Simulated Canvas Chart -->
+              <div class="h-28 flex items-end justify-between px-2 pt-4 border-b border-l border-zinc-800" id="chart-bars">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+
+            <!-- Top Performing Products -->
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <span class="text-xs font-bold text-zinc-300 block mb-3">Top Products by Guest Traffic</span>
+              <div class="space-y-2" id="top-products-list">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: BRANDING -->
+          <div id="tab-branding" class="space-y-6 hidden">
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center">
+                <i data-lucide="palette" class="w-5 h-5 mr-2 text-emerald-400"></i> Storefront Styling Customizer
+              </h3>
+              <p class="text-xs text-zinc-400 mt-1">Define design customizers. Changes sync to storefront client instantly.</p>
+            </div>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-[10px] uppercase font-bold text-zinc-400 mb-2">Primary Accent Color</label>
+                  <div class="flex items-center space-x-2">
+                    <input type="color" id="brand-primary-picker" oninput="updateBrandingColor('primary_color', this.value)" class="w-9 h-9 bg-transparent border border-zinc-800 rounded cursor-pointer">
+                    <input type="text" id="brand-primary-input" onchange="updateBrandingColor('primary_color', this.value)" class="flex-1 bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1.5 text-xs font-mono text-zinc-300 focus:outline-none focus:border-emerald-500">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[10px] uppercase font-bold text-zinc-400 mb-2">Background Color</label>
+                  <div class="flex items-center space-x-2">
+                    <input type="color" id="brand-secondary-picker" oninput="updateBrandingColor('secondary_color', this.value)" class="w-9 h-9 bg-transparent border border-zinc-800 rounded cursor-pointer">
+                    <input type="text" id="brand-secondary-input" onchange="updateBrandingColor('secondary_color', this.value)" class="flex-1 bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1.5 text-xs font-mono text-zinc-300 focus:outline-none focus:border-emerald-500">
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[10px] uppercase font-bold text-zinc-400 mb-2">Typography Font Family</label>
+                <select id="brand-font-select" onchange="updateBrandingToken('font_family', this.value)" class="w-full bg-zinc-950 border border-zinc-850 rounded px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-emerald-500 cursor-pointer">
+                  <option value="Inter">Inter (Sleek Sans-Serif)</option>
+                  <option value="Playfair Display">Playfair Display (Premium Elegant Serif)</option>
+                  <option value="Outfit">Outfit (Geometric Modernist)</option>
+                  <option value="JetBrains Mono">JetBrains Mono (Console Minimalist)</option>
+                </select>
+              </div>
+
+              <div>
+                <div class="flex justify-between items-center mb-2">
+                  <label class="block text-[10px] uppercase font-bold text-zinc-400">Border Radius</label>
+                  <span id="radius-label-val" class="text-[10px] font-mono text-emerald-400 bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800">0.5rem</span>
+                </div>
+                <input type="range" id="brand-radius-range" min="0" max="2" step="0.125" oninput="updateBrandingRadius(this.value)" class="w-full accent-emerald-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: NAVIGATION -->
+          <div id="tab-navigation" class="space-y-6 hidden">
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center">
+                <i data-lucide="link" class="w-5 h-5 mr-2 text-emerald-400"></i> Navigation Settings
+              </h3>
+              <p class="text-xs text-zinc-400 mt-1">Configure public header link arrays mapping client routing path keys.</p>
+            </div>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4" id="nav-links-form-container">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- TAB: LAYOUT -->
+          <div id="tab-layout" class="space-y-6 hidden">
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center">
+                <i data-lucide="layout-template" class="w-5 h-5 mr-2 text-emerald-400"></i> Page Sections Builder
+              </h3>
+              <p class="text-xs text-zinc-400 mt-1">Toggle visibility and settings for storefront grid and banner cards.</p>
+            </div>
+
+            <div class="space-y-4" id="layout-sections-container">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- TAB: PRODUCTS -->
+          <div id="tab-products" class="space-y-6 hidden">
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center">
+                <i data-lucide="shopping-bag" class="w-5 h-5 mr-2 text-emerald-400"></i> Product Catalog Manager
+              </h3>
+              <p class="text-xs text-zinc-400 mt-1">Manage tenant products. Products automatically index vector keys.</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6">
+              <!-- Add product -->
+              <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
+                <span class="text-xs font-bold text-zinc-300 block mb-2">Create & Index Product</span>
+                <form id="add-product-form" onsubmit="createNewProduct(event)" class="space-y-3">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="col-span-2">
+                      <label for="add-prod-name" class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Product Title</label>
+                      <input type="text" id="add-prod-name" required placeholder="Lavender Sleep Mist" class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                  </div>
+                  <div>
+                    <label for="add-prod-category" class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Category</label>
+                    <div class="flex space-x-2">
+                      <select id="add-prod-category" class="flex-1 bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 cursor-pointer">
+                        <option value="">Uncategorized</option>
+                        <!-- Populated by JS -->
+                      </select>
+                      <button type="button" onclick="openCategoryModal()" class="px-3 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-bold rounded hover:bg-zinc-750 transition shrink-0">
+                        + Add Category
+                      </button>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label for="add-prod-mrp" class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">MRP ($ USD)</label>
+                      <input type="number" id="add-prod-mrp" step="0.01" required placeholder="30.00" class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
+                    </div>
+                    <div>
+                      <label for="add-prod-selling-price" class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Selling Price ($)</label>
+                      <input type="number" id="add-prod-selling-price" step="0.01" required placeholder="24.00" class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
+                    </div>
+                  </div>
+                  <div>
+                    <label for="add-prod-image" class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Image URL</label>
+                    <input type="text" id="add-prod-image" placeholder="https://..." class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
+                  </div>
+                  <div>
+                    <label for="add-prod-desc" class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Product Description</label>
+                    <textarea id="add-prod-desc" required placeholder="Calming aromatherapeutic mist formulated with organic lavender..." class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 h-16 resize-none"></textarea>
+                  </div>
+                  <button type="submit" class="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 text-xs font-bold rounded-lg transition duration-200">
+                    Save Catalog Item
+                  </button>
+                </form>
+              </div>
+
+              <!-- Product list -->
+              <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
+                <span class="text-xs font-bold text-zinc-300 block">Catalog Inventory</span>
+                <div class="space-y-2 max-h-56 overflow-y-auto pr-1" id="console-products-list">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: GATEWAYS -->
+          <div id="tab-gateways" class="space-y-6 hidden">
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center">
+                <i data-lucide="credit-card" class="w-5 h-5 mr-2 text-emerald-400"></i> Transaction Gateway Adapters
+              </h3>
+              <p class="text-xs text-zinc-400 mt-1">Configure checkout integrations. Routes process through dynamic adapter layers.</p>
+            </div>
+
+            <div class="space-y-4">
+              <!-- Stripe Elements Card -->
+              <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
+                <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+                  <span class="text-xs font-bold text-zinc-300 flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500 mr-2"></span> Built-in Stripe Elements Checkout
+                  </span>
+                  <input type="checkbox" id="gate-stripe-active" onchange="toggleGateway('stripe', this.checked)" class="accent-emerald-500 w-3.5 h-3.5 cursor-pointer">
+                </div>
+                <div>
+                  <label class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Stripe Publishable Key</label>
+                  <input type="text" id="gate-stripe-key" onchange="saveGatewayKey('stripe', this.value)" class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1.5 text-xs font-mono text-zinc-300 focus:outline-none focus:border-emerald-500">
+                </div>
+              </div>
+
+              <!-- Proxy Webhook Card -->
+              <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
+                <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+                  <span class="text-xs font-bold text-zinc-300 flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-teal-500 mr-2"></span> External Proxy Webhooks
+                  </span>
+                  <input type="checkbox" id="gate-proxy-active" onchange="toggleGateway('proxy_hook', this.checked)" class="accent-emerald-500 w-3.5 h-3.5 cursor-pointer">
+                </div>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Proxy endpoint Hook URL</label>
+                    <input type="text" id="gate-proxy-url" onchange="saveGatewayCredentials('proxy_hook', 'webhookUrl', this.value)" class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1.5 text-xs text-zinc-300 focus:outline-none focus:border-emerald-500" placeholder="https://">
+                  </div>
+                  <div>
+                    <label class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">HMAC Security Secret</label>
+                    <input type="password" id="gate-proxy-secret" onchange="saveGatewayCredentials('proxy_hook', 'secret', this.value)" class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1.5 text-xs text-zinc-300 focus:outline-none focus:border-emerald-500" placeholder="••••••••">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: ORDERS -->
+          <div id="tab-orders" class="space-y-6 hidden animate-scale-up">
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center">
+                <i data-lucide="receipt" class="w-5 h-5 mr-2 text-emerald-400"></i> Order History Logs
+              </h3>
+              <p class="text-xs text-zinc-400 mt-1">Real-time listing of customer orders scoped to this tenant partition.</p>
+            </div>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-2xl">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-zinc-400">
+                  <thead class="text-[10px] uppercase bg-zinc-950 text-zinc-300">
+                    <tr>
+                      <th class="px-4 py-2.5 rounded-l-lg">Order ID</th>
+                      <th class="px-4 py-2.5">Customer Name</th>
+                      <th class="px-4 py-2.5">Created At</th>
+                      <th class="px-4 py-2.5">Order Total</th>
+                      <th class="px-4 py-2.5">Status</th>
+                      <th class="px-4 py-2.5 rounded-r-lg text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="orders-list-table-body" class="divide-y divide-zinc-800/50">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: CUSTOMERS -->
+          <div id="tab-customers" class="space-y-6 hidden animate-scale-up">
+            <div class="flex justify-between items-center">
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center">
+                  <i data-lucide="users" class="w-5 h-5 mr-2 text-emerald-400"></i> Customer Details
+                </h3>
+                <p class="text-xs text-zinc-400 mt-1">Manage customer profiles bound exclusively to this merchant space.</p>
+              </div>
+              <button onclick="openRegisterCustomerModal()" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 text-xs font-bold rounded-lg transition shadow-md">
+                + Register Customer
+              </button>
+            </div>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-2xl">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-zinc-400">
+                  <thead class="text-[10px] uppercase bg-zinc-950 text-zinc-300">
+                    <tr>
+                      <th class="px-4 py-2.5 rounded-l-lg">Customer ID</th>
+                      <th class="px-4 py-2.5">Name</th>
+                      <th class="px-4 py-2.5">Email Address</th>
+                      <th class="px-4 py-2.5">Phone</th>
+                      <th class="px-4 py-2.5 rounded-r-lg">Onboarded At</th>
+                    </tr>
+                  </thead>
+                  <tbody id="customers-list-table-body" class="divide-y divide-zinc-800/50">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: PLATFORM CONFIGS (Super User only) -->
+          <div id="tab-platform" class="space-y-6 hidden animate-scale-up">
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center">
+                <i data-lucide="shield" class="w-5 h-5 mr-2 text-emerald-400"></i> Platform Super User Admin Portal
+              </h3>
+              <p class="text-xs text-zinc-400 mt-1">Manage global merchant profiles, provision tenants, and bind currency configurations.</p>
+            </div>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-2xl space-y-4">
+              <span class="text-xs font-bold text-zinc-300 block border-b border-zinc-800 pb-2">Onboarded Merchant Profiles</span>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-zinc-400">
+                  <thead class="text-[10px] uppercase bg-zinc-950 text-zinc-300">
+                    <tr>
+                      <th class="px-4 py-2.5 rounded-l-lg">Merchant Name</th>
+                      <th class="px-4 py-2.5">Slug</th>
+                      <th class="px-4 py-2.5">Currency Configuration</th>
+                      <th class="px-4 py-2.5 rounded-r-lg text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="platform-merchants-table-body" class="divide-y divide-zinc-800/50">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </main>
+      </div>
+    </section>
+
+    <!-- RIGHT HALF: VISITOR STOREFRONT SANDBOX -->
+    <section id="right-workspace" class="w-1/2 h-full flex bg-[#0c0a09] overflow-hidden flex-col">
+      <div class="h-10 bg-zinc-900/60 px-6 border-b border-zinc-800 flex items-center justify-between text-xs text-zinc-400 shrink-0">
+        <span class="font-semibold text-zinc-300 flex items-center">
+          <i data-lucide="eye" class="w-3.5 h-3.5 mr-2 text-emerald-500"></i> Client Storefront Web Preview
+        </span>
+        <span class="text-[10px] text-emerald-400 font-semibold flex items-center space-x-1.5 animate-pulse-slow">
+          <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+          <span>Supabase Realtime Sync active</span>
+        </span>
+      </div>
+
+      <!-- Storefront Sandbox IFrame / Container -->
+      <div id="storefront-sandbox" class="flex-1 overflow-y-auto storefront-container">
+        <!-- Renders the custom storefront template based on live variables -->
+        <div id="sf-app" class="min-h-full flex flex-col justify-between">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- FLOATING CHATBOT WIDGET FOR STOREFRONT -->
+  <div id="sf-chatbot" class="fixed bottom-6 right-6 z-50">
+    <!-- Bubble Toggle -->
+    <button id="chatbot-toggle-btn" onclick="toggleChatWindow(true)" class="w-14 h-14 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full shadow-[0_4px_24px_rgba(0,0,0,0.4)] border border-zinc-800 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 duration-200">
+      <i data-lucide="bot" class="w-6 h-6 text-white" id="chatbot-theme-icon-color"></i>
+    </button>
+
+    <!-- Chat Box Window -->
+    <div id="chatbot-window" class="w-[380px] h-[480px] bg-zinc-950/95 border border-zinc-800 shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex-col justify-between rounded-2xl overflow-hidden backdrop-blur-xl animate-scale-up z-50 hidden" style="position: absolute; bottom: 70px; right: 0;">
+      <!-- Chat Header -->
+      <div class="px-4 py-3 bg-zinc-900/80 border-b border-zinc-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+          <div>
+            <h4 class="text-xs font-bold text-white" id="chatbot-header-title">Store Assistant</h4>
+            <p class="text-[9px] text-zinc-400">AI Semantic Search Agent</p>
+          </div>
+        </div>
+        <button onclick="toggleChatWindow(false)" class="p-1 hover:bg-zinc-800 rounded transition text-zinc-400 hover:text-zinc-200">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Messages Stream -->
+      <div id="chatbot-messages" class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Chat Input Form -->
+      <form onsubmit="sendMessageToAssistant(event)" class="p-3 border-t border-zinc-850 flex space-x-2 bg-zinc-950">
+        <input type="text" id="chatbot-input" placeholder="Search catalog semantic..." class="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500">
+        <button type="submit" class="px-3 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 rounded-lg text-xs font-bold transition">
+          Ask
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SHOPPING CART DRAWER (STOREFRONT) -->
+  <div id="cart-drawer" class="fixed inset-0 z-50 flex justify-end hidden">
+    <!-- Backdrop -->
+    <div onclick="toggleCartDrawer(false)" class="absolute inset-0 bg-zinc-950/65 backdrop-blur-sm"></div>
+    <!-- Drawer Panel -->
+    <div class="relative w-full max-w-sm bg-white text-zinc-900 h-full shadow-2xl flex flex-col justify-between z-10 animate-slide-in">
+      <div class="p-5 overflow-y-auto flex-1 space-y-5">
+        <div class="flex items-center justify-between border-b border-zinc-200 pb-3">
+          <h4 class="text-base font-extrabold text-zinc-950">Shopping Cart</h4>
+          <button onclick="toggleCartDrawer(false)" class="text-zinc-400 hover:text-zinc-700 p-1">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <div id="cart-items-list" class="space-y-3">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Footer total and checkout -->
+      <div class="p-5 bg-zinc-50 border-t border-zinc-200 space-y-3" id="cart-footer">
+        <div class="flex justify-between font-bold text-sm text-zinc-850">
+          <span>Subtotal</span>
+          <span id="cart-subtotal-val">$0.00</span>
+        </div>
+        <button onclick="initializeCheckoutFlow()" id="cart-checkout-btn" class="w-full py-3 bg-zinc-900 text-white font-bold hover:bg-zinc-800 transition text-xs tracking-wider uppercase rounded-lg">
+          Proceed to Checkout
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHECKOUT MODAL -->
+  <div id="checkout-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+    <div onclick="closeCheckoutModal()" class="absolute inset-0 bg-zinc-950/65 backdrop-blur-sm"></div>
+    <div class="relative bg-white text-zinc-900 rounded-xl max-w-sm w-full shadow-2xl p-5 z-10 overflow-hidden border border-zinc-100 animate-scale-up">
+      
+      <!-- Checkout Screen content -->
+      <div id="checkout-modal-content" class="space-y-4">
+        <!-- Populated dynamically based on Stripe / Webhook state -->
+      </div>
+    </div>
+  </div>
+
+  <!-- INSTANT ONBOARDING MODAL -->
+  <div id="onboard-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+    <div onclick="closeOnboardModal()" class="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+    <div class="relative bg-zinc-900 border border-zinc-800 rounded-xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-zinc-200">
+      <div>
+        <h3 class="text-sm font-extrabold text-white uppercase tracking-wider">Onboard New Merchant Space</h3>
+        <p class="text-xs text-zinc-400 mt-1">Provision tenant schema partitions, default navigation configs, catalog indices, and active Stripe gateway simulation.</p>
+      </div>
+      
+      <form onsubmit="onboardNewTenant(event)" class="space-y-3">
+        <div>
+          <label class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Merchant Store Name</label>
+          <input type="text" id="ob-store-name" required placeholder="e.g. Kinetic Activewear" class="w-full bg-zinc-950 border border-zinc-850 rounded px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-zinc-200">
+        </div>
+        <div>
+          <label class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Subdomain Slug</label>
+          <input type="text" id="ob-store-slug" required placeholder="kinetic" class="w-full bg-zinc-950 border border-zinc-850 rounded px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-mono text-emerald-400">
+        </div>
+        
+        <div class="flex space-x-3 pt-2">
+          <button type="button" onclick="closeOnboardModal()" class="flex-1 py-2 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 rounded text-xs font-bold transition">
+            Cancel
+          </button>
+          <button type="submit" class="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 rounded text-xs font-bold transition">
+            Onboard Workspace
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADD CATEGORY MODAL -->
+  <div id="category-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+    <div onclick="closeCategoryModal()" class="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+    <div class="relative bg-zinc-900 border border-zinc-800 rounded-xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-zinc-200">
+      <div>
+        <h3 class="text-sm font-extrabold text-white uppercase tracking-wider">Add New Category</h3>
+        <p class="text-xs text-zinc-400 mt-1">Create a new product grouping for this merchant workspace catalog.</p>
+      </div>
+      
+      <form onsubmit="createNewCategory(event)" class="space-y-3">
+        <div>
+          <label for="new-cat-name" class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Category Name</label>
+          <input type="text" id="new-cat-name" required placeholder="e.g. Rituals" class="w-full bg-zinc-950 border border-zinc-850 rounded px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 text-zinc-200">
+        </div>
+        
+        <div class="flex space-x-3 pt-2">
+          <button type="button" onclick="closeCategoryModal()" class="flex-1 py-2 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 rounded text-xs font-bold transition">
+            Cancel
+          </button>
+          <button type="submit" class="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 rounded text-xs font-bold transition">
+            Save Category
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- REGISTER CUSTOMER MODAL -->
+  <div id="register-customer-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+    <div onclick="closeRegisterCustomerModal()" class="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+    <div class="relative bg-zinc-900 border border-zinc-800 rounded-xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-zinc-200 animate-scale-up">
+      <div>
+        <h3 class="text-sm font-extrabold text-white uppercase tracking-wider">Register Customer</h3>
+        <p class="text-xs text-zinc-400 mt-1">Create a new customer profile under this merchant space.</p>
+      </div>
+      
+      <form onsubmit="createNewCustomer(event)" class="space-y-3">
+        <div>
+          <label class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Full Name</label>
+          <input type="text" id="cust-name-input" required placeholder="e.g. Alice Smith" class="w-full bg-zinc-950 border border-zinc-850 rounded px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Email Address</label>
+          <input type="email" id="cust-email-input" required placeholder="alice@example.com" class="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="block text-[9px] uppercase font-bold text-zinc-400 mb-1">Phone Number</label>
+          <input type="text" id="cust-phone-input" required placeholder="+1 (555) 019-2834" class="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500">
+        </div>
+        
+        <div class="flex space-x-3 pt-2">
+          <button type="button" onclick="closeRegisterCustomerModal()" class="flex-1 py-2 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 rounded text-xs font-bold transition">
+            Cancel
+          </button>
+          <button type="submit" class="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 rounded text-xs font-bold transition">
+            Save Profile
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPTING CORE FOR MOCK ENGINE & INTERACTIVE PREVIEW -->
+  <script>
+    // ----------------------------------------------------
+    // 1. DATA STORE INITIALIZATION
+    // -------------------------------------
+    let state = {
+      activeTenantId: 'm1-solara-wellness',
+      currentRole: 'super_user',
+      activeCategory: null,
+      merchants: [
+        { id: 'm1-solara-wellness', name: 'Solara Organic Botanicals', slug: 'solara' },
+        { id: 'm2-aether-tech', name: 'Aether Minimalist Tech', slug: 'aether' }
+      ],
+      storefrontConfigs: {
+        'm1-solara-wellness': {
+          theme: {
+            primary_color: '#0d9488',
+            secondary_color: '#f0fdfa',
+            font_family: 'Playfair Display',
+            border_radius: '1rem'
+          },
+          navigation: [
+            { label: 'Home', link: '/' },
+            { label: 'Shop Apothecary', link: '/shop' },
+            { label: 'Rituals', link: '/rituals' }
+          ],
+          sections: [
+            {
+              id: 'hero-s1',
+              type: 'hero',
+              title: 'Cultivate Outer Glow & Inner Peace',
+              visible: true,
+              settings: {
+                cta_text: 'Discover Organic Beauty',
+                cta_link: '/shop',
+                image_url: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80'
+              }
+            },
+            {
+              id: 'grid-s1',
+              type: 'product_grid',
+              title: 'Apothecary Collection',
+              visible: true,
+              settings: { limit: 8, columns: 3 }
+            }
+          ]
+        },
+        'm2-aether-tech': {
+          theme: {
+            primary_color: '#18181b',
+            secondary_color: '#fafafa',
+            font_family: 'Outfit',
+            border_radius: '0.25rem'
+          },
+          navigation: [
+            { label: 'Home', link: '/' },
+            { label: 'Shop Hardware', link: '/shop' },
+            { label: 'Project Aether', link: '/about' }
+          ],
+          sections: [
+            {
+              id: 'hero-a1',
+              type: 'hero',
+              title: 'Refining Daily Tech Essentials',
+              visible: true,
+              settings: {
+                cta_text: 'Explore Workspace Upgrades',
+                cta_link: '/shop',
+                image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80'
+              }
+            },
+            {
+              id: 'grid-a1',
+              type: 'product_grid',
+              title: 'Engineered Gear',
+              visible: true,
+              settings: { limit: 8, columns: 4 }
+            }
+          ]
+        }
+      },
+      merchantConfigs: [
+        { merchant_id: 'm1-solara-wellness', merchant_name: 'Solara Organic Botanicals', currency_code: 'USD' },
+        { merchant_id: 'm2-aether-tech', merchant_name: 'Aether Minimalist Tech', currency_code: 'USD' }
+      ],
+      categories: [
+        { id: 'cat-solara-1', merchant_id: 'm1-solara-wellness', name: 'Apothecary' },
+        { id: 'cat-solara-2', merchant_id: 'm1-solara-wellness', name: 'Wellness Rituals' },
+        { id: 'cat-aether-1', merchant_id: 'm2-aether-tech', name: 'Hardware' },
+        { id: 'cat-aether-2', merchant_id: 'm2-aether-tech', name: 'Desk Accessories' }
+      ],
+      products: [
+        { id: 'p-s1', merchant_id: 'm1-solara-wellness', category_id: 'cat-solara-1', name: 'Lavender Sleep Mist', description: 'Calming aromatherapeutic sleep spray formulated with organic lavender and chamomile oils to promote deep, restful relaxation.', price: 24.00, mrp: 30.00, selling_price: 24.00, image_url: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=600&q=80' },
+        { id: 'p-s2', merchant_id: 'm1-solara-wellness', category_id: 'cat-solara-1', name: 'Rosewater Refresh Tonic', description: 'Hydrating floral facial mist distilled from organic Damask rose petals to balance pH and revive dull skin instantly.', price: 18.00, mrp: 22.00, selling_price: 18.00, image_url: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=600&q=80' },
+        { id: 'p-s3', merchant_id: 'm1-solara-wellness', category_id: 'cat-solara-1', name: 'Eucalyptus Cleansing Oil', description: 'Detoxifying facial cleansing oil that lifts makeup and impurities while refreshing the senses with clean eucalyptus essence.', price: 28.00, mrp: 35.00, selling_price: 28.00, image_url: 'https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?auto=format&fit=crop&w=600&q=80' },
+        { id: 'p-s4', merchant_id: 'm1-solara-wellness', category_id: 'cat-solara-1', name: 'Matcha Glow Clay Mask', description: 'Clarifying green tea clay mask packed with antioxidants to gently exfoliate, brighten skin tone, and minimize pores.', price: 32.00, mrp: 40.00, selling_price: 32.00, image_url: 'https://images.unsplash.com/photo-1567894192231-d22d9c12214d?auto=format&fit=crop&w=600&q=80' },
+        { id: 'p-s5', merchant_id: 'm1-solara-wellness', category_id: 'cat-solara-2', name: 'Jasmine Whipped Body Butter', description: 'Deeply nourishing body butter whipped with shea butter and jojoba oil, scented with exotic night-blooming jasmine flowers.', price: 36.00, mrp: 45.00, selling_price: 36.00, image_url: 'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?auto=format&fit=crop&w=600&q=80' },
+        
+        { id: 'p-a1', merchant_id: 'm2-aether-tech', category_id: 'cat-aether-2', name: 'Slate Leather Sleeve', description: 'Sleek, hand-stitched full-grain leather laptop sleeve designed specifically for MacBook Pro. Microfiber lining keeps it scratch-free.', price: 89.00, mrp: 110.00, selling_price: 89.00, image_url: 'https://images.unsplash.com/photo-1512909006721-3d6018887383?auto=format&fit=crop&w=600&q=80' },
+        { id: 'p-a2', merchant_id: 'm2-aether-tech', category_id: 'cat-aether-1', name: 'Orbit MagSafe Charging Stand', description: 'Anodized aerospace-grade aluminum wireless charging stand. Holds iPhone securely in landscape or portrait orientation.', price: 59.00, mrp: 75.00, selling_price: 59.00, image_url: 'https://images.unsplash.com/photo-1616440347437-b1c73416efc2?auto=format&fit=crop&w=600&q=80' },
+        { id: 'p-a3', merchant_id: 'm2-aether-tech', category_id: 'cat-aether-2', name: 'Transit Tech Pouch', description: 'Water-resistant cord organizer pouch made of Cordura nylon. Designed with elastic loops, zip pockets, and dual pen compartments.', price: 45.00, mrp: 55.00, selling_price: 45.00, image_url: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=600&q=80' },
+        { id: 'p-a4', merchant_id: 'm2-aether-tech', category_id: 'cat-aether-1', name: 'Nova Mechanical Keyboard', description: 'Ultra-slim 65% layout wireless mechanical keyboard with quiet linear switches, aluminum frame, and customizable white backlighting.', price: 149.00, mrp: 179.00, selling_price: 149.00, image_url: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=600&q=80' },
+        { id: 'p-a5', merchant_id: 'm2-aether-tech', category_id: 'cat-aether-2', name: 'Merino Wool Desk Pad', description: 'Premium desk mat crafted from water-repellent merino wool felt. Cushions keyboard clicks and guides mouse movements smoothly.', price: 65.00, mrp: 80.00, selling_price: 65.00, image_url: 'https://images.unsplash.com/photo-1632292224971-0d45778bd364?auto=format&fit=crop&w=600&q=80' }
+      ],
+      customers: [
+        { customer_id: 'cust-1', name: 'John Doe', email: 'john@example.com', phone: '+1234567890', merchant_id: 'm1-solara-wellness', created_at: new Date(Date.now() - 3600000 * 24 * 10).toISOString() },
+        { customer_id: 'cust-2', name: 'Jane Smith', email: 'jane@example.com', phone: '+1987654321', merchant_id: 'm1-solara-wellness', created_at: new Date(Date.now() - 3600000 * 24 * 8).toISOString() },
+        { customer_id: 'cust-3', name: 'Bob Johnson', email: 'bob@example.com', phone: '+1555666777', merchant_id: 'm2-aether-tech', created_at: new Date(Date.now() - 3600000 * 24 * 9).toISOString() }
+      ],
+      gateways: {
+        'm1-solara-wellness': {
+          stripe: { active: true, publicKey: 'pk_test_solara_123' },
+          proxy_hook: { active: false, webhookUrl: '', secret: '' }
+        },
+        'm2-aether-tech': {
+          stripe: { active: false, publicKey: '' },
+          proxy_hook: { active: true, webhookUrl: 'https://api.aethertech.com/webhook', secret: 'aether_sec_889' }
+        }
+      },
+      orders: [
+        { order_id: 'o-s1', customer_id: 'cust-1', merchant_id: 'm1-solara-wellness', order_total: 42.00, order_status: 'paid', created_at: new Date(Date.now() - 3600000 * 24 * 3).toISOString() },
+        { order_id: 'o-s2', customer_id: 'cust-2', merchant_id: 'm1-solara-wellness', order_total: 72.00, order_status: 'paid', created_at: new Date(Date.now() - 3600000 * 24 * 1.5).toISOString() },
+        { order_id: 'o-a1', customer_id: 'cust-3', merchant_id: 'm2-aether-tech', order_total: 148.00, order_status: 'paid', created_at: new Date(Date.now() - 3600000 * 24 * 4).toISOString() },
+        { order_id: 'o-a2', customer_id: 'cust-3', merchant_id: 'm2-aether-tech', order_total: 149.00, order_status: 'paid', created_at: new Date(Date.now() - 3600000 * 12).toISOString() }
+      ],
+      analyticsEvents: [
+        { merchant_id: 'm1-solara-wellness', event_type: 'view_item', session_id: 's-1' },
+        { merchant_id: 'm1-solara-wellness', event_type: 'view_item', session_id: 's-1' },
+        { merchant_id: 'm1-solara-wellness', event_type: 'purchase_complete', session_id: 's-1' },
+        { merchant_id: 'm1-solara-wellness', event_type: 'view_item', session_id: 's-2' },
+        { merchant_id: 'm1-solara-wellness', event_type: 'purchase_complete', session_id: 's-2' },
+        { merchant_id: 'm2-aether-tech', event_type: 'view_item', session_id: 's-a1' },
+        { merchant_id: 'm2-aether-tech', event_type: 'purchase_complete', session_id: 's-a1' },
+        { merchant_id: 'm2-aether-tech', event_type: 'view_item', session_id: 's-a2' }
+      ],
+      cart: [],
+      chatHistory: {}
+    };
+
+    // Load state from localStorage if it exists
+    if (localStorage.getItem('ai_commerce_engine_state')) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('ai_commerce_engine_state'));
+        // Deep merge
+        state = { ...state, ...saved };
+      } catch (e) {
+        console.error("Local state parsing error:", e);
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem('ai_commerce_engine_state', JSON.stringify(state));
+    }
+
+    // ----------------------------------------------------
+    // 2. TENANT SWAPPER & INIT
+    // ----------------------------------------------------
+    function formatPrice(amount) {
+      const activeConf = state.merchantConfigs.find(c => c.merchant_id === state.activeTenantId) || { currency_code: 'USD' };
+      const symbol = activeConf.currency_code === 'INR' ? '₹' : activeConf.currency_code === 'EUR' ? '€' : '$';
+      return `${symbol}${amount.toFixed(2)}`;
+    }
+
+    function switchRole(role) {
+      state.currentRole = role;
+      saveState();
+
+      const btnSuper = document.getElementById('btn-role-superuser');
+      const btnAdmin = document.getElementById('btn-role-merchantadmin');
+      
+      if (role === 'super_user') {
+        btnSuper.className = 'px-2.5 py-1 rounded bg-emerald-500 text-zinc-950 font-bold transition';
+        btnAdmin.className = 'px-2.5 py-1 rounded text-zinc-400 font-bold hover:text-zinc-200 transition';
+        
+        document.getElementById('tenant-select-container').style.display = 'flex';
+        document.getElementById('tenant-divider').style.display = 'block';
+        document.getElementById('header-onboard-btn').style.display = 'flex';
+        document.getElementById('btn-tab-platform').style.display = 'flex';
+        document.getElementById('rls-label-text').innerText = 'Super User RLS Override';
+      } else {
+        btnSuper.className = 'px-2.5 py-1 rounded text-zinc-400 font-bold hover:text-zinc-200 transition';
+        btnAdmin.className = 'px-2.5 py-1 rounded bg-emerald-500 text-zinc-950 font-bold transition';
+        
+        document.getElementById('tenant-select-container').style.display = 'none';
+        document.getElementById('tenant-divider').style.display = 'none';
+        document.getElementById('header-onboard-btn').style.display = 'none';
+        document.getElementById('btn-tab-platform').style.display = 'none';
+        document.getElementById('rls-label-text').innerText = 'PostgreSQL RLS Active';
+        
+        const activeTabBtn = document.querySelector('[id^="btn-tab-"][class*="text-emerald-400"]');
+        if (activeTabBtn && activeTabBtn.id === 'btn-tab-platform') {
+          showTab('analytics');
+        }
+      }
+    }
+
+    function init() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isPreview = urlParams.get('preview') === 'true';
+      const tenantParam = urlParams.get('tenant');
+
+      if (isPreview && tenantParam) {
+        const leftCol = document.getElementById('left-workspace');
+        const rightCol = document.getElementById('right-workspace');
+        const header = document.querySelector('header');
+        
+        if (leftCol) leftCol.style.display = 'none';
+        if (header) header.style.display = 'none';
+        if (rightCol) {
+          rightCol.classList.remove('w-1/2');
+          rightCol.classList.add('w-full', 'h-screen');
+        }
+        state.activeTenantId = tenantParam;
+      }
+
+      const selector = document.getElementById('tenant-select');
+      selector.innerHTML = '';
+      state.merchants.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.innerText = `${m.name} (${m.slug})`;
+        if (m.id === state.activeTenantId) opt.selected = true;
+        selector.appendChild(opt);
+      });
+
+      lucide.createIcons();
+      switchRole(state.currentRole || 'super_user');
+      switchTenant(state.activeTenantId);
+    }
+
+    function switchTenant(tenantId) {
+      state.activeTenantId = tenantId;
+      saveState();
+
+      document.getElementById('console-partition-label').innerText = `partition: ${tenantId}`;
+
+      loadBrandingForm();
+      loadNavigationForm();
+      loadLayoutForm();
+      loadProductsForm();
+      loadGatewaysForm();
+      loadOrdersTable();
+      loadCustomersTable();
+      loadPlatformConfigsTable();
+      
+      calculateMetrics();
+
+      state.cart = [];
+      updateCartBadge();
+      
+      syncStorefront();
+
+      const activeMerch = state.merchants.find(m => m.id === tenantId);
+      const greeting = `Hello! Welcome to **${activeMerch.name}**. I can help you query our products semantic catalog or answer storefront questions. Ask me anything!`;
+      state.chatHistory[tenantId] = [
+        { sender: 'assistant', text: greeting, timestamp: new Date() }
+      ];
+      renderChatMessages();
+    }
+
+    function loadOrdersTable() {
+      const tbody = document.getElementById('orders-list-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      const tenantOrders = state.orders.filter(o => o.merchant_id === state.activeTenantId);
+      
+      if (tenantOrders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-zinc-500 text-xs py-4 text-center">No transactions recorded</td></tr>';
+        return;
+      }
+      
+      tenantOrders.forEach(o => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-zinc-800/50 hover:bg-zinc-800/10 transition';
+        const cust = state.customers.find(c => c.customer_id === o.customer_id);
+        const custHTML = cust 
+          ? `<div><p class="font-semibold text-zinc-200">${cust.name}</p><p class="text-[9px] text-zinc-500">${cust.email}</p></div>`
+          : '<span class="text-zinc-550 italic">Guest Buyer</span>';
+        const refundBtn = (o.status === 'paid' || o.order_status === 'paid')
+          ? `<button onclick="refundPreviewOrder('${o.id || o.order_id}', ${o.total_amount || o.order_total})" class="px-2.5 py-1 bg-red-950/20 hover:bg-red-950/40 border border-red-900/50 text-red-400 text-[10px] rounded transition">Refund</button>`
+          : '';
+          
+        row.innerHTML = `
+          <td class="px-4 py-3 font-mono text-xs text-zinc-300 font-bold">${o.id || o.order_id}</td>
+          <td class="px-4 py-3">${custHTML}</td>
+          <td class="px-4 py-3 text-[10px] text-zinc-500">${new Date(o.created_at).toLocaleString()}</td>
+          <td class="px-4 py-3 font-mono font-bold text-emerald-400">${formatPrice(o.total_amount || o.order_total)}</td>
+          <td class="px-4 py-3">
+            <span class="text-[9px] px-2 py-0.5 rounded border font-semibold ${
+              (o.status || o.order_status) === 'paid' ? 'bg-emerald-950 text-emerald-400 border-emerald-900' :
+              (o.status || o.order_status) === 'refunded' ? 'bg-indigo-950 text-indigo-400 border-indigo-900' :
+              'bg-zinc-900 text-zinc-400 border-zinc-700'
+            }">${o.status || o.order_status}</span>
+          </td>
+          <td class="px-4 py-3 text-right">${refundBtn}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function refundPreviewOrder(orderId, amount) {
+      if (confirm(`Refund order ${orderId} for ${formatPrice(amount)}?`)) {
+        const order = state.orders.find(o => (o.id === orderId || o.order_id === orderId));
+        if (order) {
+          order.status = 'refunded';
+          order.order_status = 'refunded';
+          saveState();
+          loadOrdersTable();
+          calculateMetrics();
+        }
+      }
+    }
+
+    function loadCustomersTable() {
+      const tbody = document.getElementById('customers-list-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      const tenantCustomers = state.customers.filter(c => c.merchant_id === state.activeTenantId);
+      
+      if (tenantCustomers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-zinc-500 text-xs py-4 text-center">No customer profiles found</td></tr>';
+        return;
+      }
+      
+      tenantCustomers.forEach(c => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-zinc-800/50 hover:bg-zinc-800/10 transition';
+        row.innerHTML = `
+          <td class="px-4 py-3 font-mono text-xs text-zinc-500">${c.customer_id}</td>
+          <td class="px-4 py-3 font-semibold text-zinc-200">${c.name}</td>
+          <td class="px-4 py-3 font-mono text-[10px] text-zinc-400">${c.email}</td>
+          <td class="px-4 py-3 text-zinc-300">${c.phone}</td>
+          <td class="px-4 py-3 text-[10px] text-zinc-500">${new Date(c.created_at || Date.now()).toLocaleString()}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function openRegisterCustomerModal() {
+      document.getElementById('register-customer-modal').classList.remove('hidden');
+    }
+    
+    function closeRegisterCustomerModal() {
+      document.getElementById('register-customer-modal').classList.add('hidden');
+      document.getElementById('cust-name-input').value = '';
+      document.getElementById('cust-email-input').value = '';
+      document.getElementById('cust-phone-input').value = '';
+    }
+    
+    function createNewCustomer(e) {
+      e.preventDefault();
+      const name = document.getElementById('cust-name-input').value.trim();
+      const email = document.getElementById('cust-email-input').value.trim();
+      const phone = document.getElementById('cust-phone-input').value.trim();
+      if (!name || !email || !phone) return;
+      
+      const newCust = {
+        customer_id: `cust-${Math.random().toString(36).substr(2, 9)}`,
+        name,
+        email,
+        phone,
+        merchant_id: state.activeTenantId,
+        created_at: new Date().toISOString()
+      };
+      
+      state.customers.push(newCust);
+      saveState();
+      loadCustomersTable();
+      closeRegisterCustomerModal();
+    }
+
+    function loadPlatformConfigsTable() {
+      const tbody = document.getElementById('platform-merchants-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      
+      state.merchants.forEach(m => {
+        const conf = state.merchantConfigs.find(c => c.merchant_id === m.id) || { currency_code: 'USD' };
+        const row = document.createElement('tr');
+        row.className = 'border-b border-zinc-800/50 hover:bg-zinc-800/10 transition';
+        row.innerHTML = `
+          <td class="px-4 py-3 font-semibold text-zinc-200">
+            <input type="text" value="${m.name}" onchange="updatePlatformMerchantName('${m.id}', this.value)" class="bg-transparent border-b border-dashed border-zinc-700 hover:border-emerald-500 focus:border-emerald-500 focus:outline-none px-1 py-0.5 w-48">
+          </td>
+          <td class="px-4 py-3 font-mono text-xs text-zinc-400">${m.slug}</td>
+          <td class="px-4 py-3">
+            <select onchange="updatePlatformMerchantCurrency('${m.id}', this.value)" class="bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 cursor-pointer">
+              <option value="USD" ${conf.currency_code === 'USD' ? 'selected' : ''}>USD ($)</option>
+              <option value="EUR" ${conf.currency_code === 'EUR' ? 'selected' : ''}>EUR (€)</option>
+              <option value="INR" ${conf.currency_code === 'INR' ? 'selected' : ''}>INR (₹)</option>
+            </select>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <button onclick="switchTenant('${m.id}')" class="px-3 py-1 bg-zinc-850 hover:bg-zinc-800 text-emerald-400 border border-zinc-750 text-xs font-bold rounded transition">Manage</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function updatePlatformMerchantName(merchantId, newName) {
+      const merchant = state.merchants.find(m => m.id === merchantId);
+      if (merchant) {
+        merchant.name = newName;
+      }
+      const conf = state.merchantConfigs.find(c => c.merchant_id === merchantId);
+      if (conf) {
+        conf.merchant_name = newName;
+      }
+      saveState();
+      
+      const selector = document.getElementById('tenant-select');
+      const opt = Array.from(selector.options).find(o => o.value === merchantId);
+      if (opt) opt.innerText = `${newName} (${merchant.slug})`;
+      
+      syncStorefront();
+    }
+
+    function updatePlatformMerchantCurrency(merchantId, currencyCode) {
+      let conf = state.merchantConfigs.find(c => c.merchant_id === merchantId);
+      if (conf) {
+        conf.currency_code = currencyCode;
+      } else {
+        conf = {
+          merchant_id: merchantId,
+          merchant_name: state.merchants.find(m => m.id === merchantId).name,
+          currency_code: currencyCode
+        };
+        state.merchantConfigs.push(conf);
+      }
+      saveState();
+      
+      calculateMetrics();
+      syncStorefront();
+      loadProductsForm();
+      loadOrdersTable();
+    }
+
+    function triggerPreviewStorefront() {
+      const url = `${window.location.origin}${window.location.pathname}?preview=true&tenant=${state.activeTenantId}`;
+      window.open(url, '_blank');
+    }
+
+    // ----------------------------------------------------
+    // 3. BRANDING MUTATIONS & REALTIME SYNC
+    // ----------------------------------------------------
+    function loadBrandingForm() {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      
+      document.getElementById('brand-primary-picker').value = config.theme.primary_color;
+      document.getElementById('brand-primary-input').value = config.theme.primary_color;
+      
+      document.getElementById('brand-secondary-picker').value = config.theme.secondary_color;
+      document.getElementById('brand-secondary-input').value = config.theme.secondary_color;
+      
+      document.getElementById('brand-font-select').value = config.theme.font_family;
+      
+      const rad = parseFloat(config.theme.border_radius) || 0;
+      document.getElementById('brand-radius-range').value = rad;
+      document.getElementById('radius-label-val').innerText = `${rad}rem`;
+    }
+
+    function updateBrandingColor(property, val) {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      config.theme[property] = val;
+      
+      // Update inputs
+      if (property === 'primary_color') {
+        document.getElementById('brand-primary-picker').value = val;
+        document.getElementById('brand-primary-input').value = val;
+      } else {
+        document.getElementById('brand-secondary-picker').value = val;
+        document.getElementById('brand-secondary-input').value = val;
+      }
+      
+      saveState();
+      // REALTIME BROADCAST SYNCHRONIZATION TRIGGER
+      syncStorefrontTheme();
+    }
+
+    function updateBrandingToken(property, val) {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      config.theme[property] = val;
+      saveState();
+      syncStorefrontTheme();
+    }
+
+    function updateBrandingRadius(val) {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      config.theme.border_radius = `${val}rem`;
+      document.getElementById('radius-label-val').innerText = `${val}rem`;
+      saveState();
+      syncStorefrontTheme();
+    }
+
+    // ----------------------------------------------------
+    // 4. NAVIGATION LINKS MUTATIONS
+    // ----------------------------------------------------
+    function loadNavigationForm() {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      const container = document.getElementById('nav-links-form-container');
+      container.innerHTML = '<span class="text-xs font-bold text-zinc-300 block mb-2">Configure Header Links</span>';
+
+      config.navigation.forEach((nav, idx) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center space-x-2 bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80';
+        item.innerHTML = `
+          <input type="text" value="${nav.label}" onchange="updateNavLink(${idx}, 'label', this.value)" class="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1 text-xs text-zinc-200 focus:outline-none">
+          <input type="text" value="${nav.link}" onchange="updateNavLink(${idx}, 'link', this.value)" class="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1 text-xs font-mono text-zinc-300 focus:outline-none">
+          <button onclick="deleteNavLink(${idx})" class="p-1 hover:bg-red-950/20 text-red-400 rounded hover:border-red-900 border border-transparent">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        `;
+        container.appendChild(item);
+      });
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'w-full py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-xs font-bold text-zinc-200 hover:bg-zinc-750 transition flex items-center justify-center space-x-1';
+      addBtn.innerHTML = '<i data-lucide="plus" class="w-3 h-3"></i> <span>Add Header Link</span>';
+      addBtn.onclick = addNavLink;
+      container.appendChild(addBtn);
+
+      lucide.createIcons();
+    }
+
+    function updateNavLink(idx, key, val) {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      config.navigation[idx][key] = val;
+      saveState();
+      syncStorefront();
+    }
+
+    function addNavLink() {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      config.navigation.push({ label: 'New Link', link: '/new' });
+      saveState();
+      loadNavigationForm();
+      syncStorefront();
+    }
+
+    function deleteNavLink(idx) {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      config.navigation.splice(idx, 1);
+      saveState();
+      loadNavigationForm();
+      syncStorefront();
+    }
+
+    // ----------------------------------------------------
+    // 5. PAGE SECTIONS BUILDER
+    // ----------------------------------------------------
+    function loadLayoutForm() {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      const container = document.getElementById('layout-sections-container');
+      container.innerHTML = '';
+
+      config.sections.forEach((sect, idx) => {
+        const card = document.createElement('div');
+        card.className = 'bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3';
+        
+        let settingsHTML = '';
+        if (sect.type === 'hero') {
+          settingsHTML = `
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <div>
+                <label class="block text-[9px] text-zinc-400 mb-1">CTA Label</label>
+                <input type="text" value="${sect.settings.cta_text}" onchange="updateSectionSetting(${idx}, 'cta_text', this.value)" class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1 text-xs text-zinc-200 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-[9px] text-zinc-400 mb-1">CTA Action Route</label>
+                <input type="text" value="${sect.settings.cta_link}" onchange="updateSectionSetting(${idx}, 'cta_link', this.value)" class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1 text-xs text-zinc-200 focus:outline-none">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-[9px] text-zinc-400 mb-1">Banner Image URL</label>
+                <input type="text" value="${sect.settings.image_url}" onchange="updateSectionSetting(${idx}, 'image_url', this.value)" class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1 text-xs text-zinc-200 focus:outline-none font-mono">
+              </div>
+            </div>
+          `;
+        } else if (sect.type === 'product_grid') {
+          settingsHTML = `
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <div>
+                <label class="block text-[9px] text-zinc-400 mb-1">Grid Display Limit</label>
+                <input type="number" value="${sect.settings.limit}" onchange="updateSectionSetting(${idx}, 'limit', parseInt(this.value))" class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1 text-xs text-zinc-200 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-[9px] text-zinc-400 mb-1">Columns Layout</label>
+                <select onchange="updateSectionSetting(${idx}, 'columns', parseInt(this.value))" class="w-full bg-zinc-950 border border-zinc-850 rounded px-2 py-1 text-xs text-zinc-200 focus:outline-none cursor-pointer">
+                  <option value="2" ${sect.settings.columns === 2 ? 'selected' : ''}>2 Columns</option>
+                  <option value="3" ${sect.settings.columns === 3 ? 'selected' : ''}>3 Columns</option>
+                  <option value="4" ${sect.settings.columns === 4 ? 'selected' : ''}>4 Columns</option>
+                </select>
+              </div>
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+            <span class="text-xs font-bold text-zinc-300 uppercase tracking-wide">
+              ${sect.type === 'hero' ? 'Hero Banner' : 'Products Grid'}
+            </span>
+            <label class="flex items-center space-x-1.5 cursor-pointer">
+              <span class="text-[10px] text-zinc-400">Visible</span>
+              <input type="checkbox" ${sect.visible ? 'checked' : ''} onchange="updateSectionVisibility(${idx}, this.checked)" class="accent-emerald-500 w-3 h-3">
+            </label>
+          </div>
+          <div class="space-y-2">
+            <div>
+              <label class="block text-[9px] text-zinc-400 mb-1">Section Title</label>
+              <input type="text" value="${sect.title}" onchange="updateSectionTitle(${idx}, this.value)" class="w-full bg-zinc-950 border border-zinc-850 rounded px-2.5 py-1 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500">
+            </div>
+            ${settingsHTML}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function updateSectionVisibility(idx, visible) {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      config.sections[idx].visible = visible;
+      saveState();
+      syncStorefront();
+    }
+
+    function updateSectionTitle(idx, val) {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      config.sections[idx].title = val;
+      saveState();
+      syncStorefront();
+    }
+
+    function updateSectionSetting(sectIdx, settingKey, val) {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      config.sections[sectIdx].settings[settingKey] = val;
+      saveState();
+      syncStorefront();
+    }
+
+    // ----------------------------------------------------
+    // 6. PRODUCT CATALOG MANAGEMENT
+    // ----------------------------------------------------
+    function loadProductsForm() {
+      // Populate category dropdown
+      const catSelect = document.getElementById('add-prod-category');
+      if (catSelect) {
+        const currentSelected = catSelect.value;
+        catSelect.innerHTML = '<option value="">Uncategorized</option>';
+        const tenantCats = state.categories.filter(c => c.merchant_id === state.activeTenantId);
+        tenantCats.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.innerText = c.name;
+          catSelect.appendChild(opt);
+        });
+        if (currentSelected && tenantCats.some(c => c.id === currentSelected)) {
+          catSelect.value = currentSelected;
+        }
+      }
+
+      const tenantProducts = state.products.filter(p => p.merchant_id === state.activeTenantId);
+      const container = document.getElementById('console-products-list');
+      container.innerHTML = '';
+
+      if (tenantProducts.length === 0) {
+        container.innerHTML = '<span class="text-zinc-500 text-xs py-4 block text-center">Empty catalog workspace</span>';
+        return;
+      }
+
+      tenantProducts.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-3 bg-zinc-950 rounded-lg border border-zinc-850';
+        const cat = state.categories.find(c => c.id === p.category_id);
+        const catBadgeHTML = cat ? `<span class="bg-zinc-850 text-zinc-300 text-[9px] px-1.5 py-0.5 rounded ml-2 border border-zinc-750 font-sans font-normal">${cat.name}</span>` : '';
+        
+        const sellingPrice = p.selling_price ?? p.price;
+        const mrp = p.mrp ?? p.price;
+        const priceHTML = mrp > sellingPrice
+          ? `<span class="text-[10px] text-emerald-400 font-mono font-semibold">${formatPrice(sellingPrice)}</span>
+             <span class="text-[9px] text-zinc-500 line-through font-mono ml-1.5">${formatPrice(mrp)}</span>`
+          : `<span class="text-[10px] text-emerald-400 font-mono font-semibold">${formatPrice(sellingPrice)}</span>`;
+
+        item.innerHTML = `
+          <div class="flex items-center space-x-3 truncate">
+            <img src="${p.image_url}" alt="" class="w-10 h-10 object-cover rounded border border-zinc-800">
+            <div class="truncate">
+              <h4 class="font-bold text-xs text-zinc-200 truncate flex items-center">${p.name}${catBadgeHTML}</h4>
+              ${priceHTML}
+            </div>
+          </div>
+          <button onclick="deleteCatalogProduct('${p.id}')" class="px-2.5 py-1 text-[10px] border border-red-900/40 text-red-400 hover:bg-red-950/20 rounded transition">
+            Delete
+          </button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function openCategoryModal() {
+      document.getElementById('category-modal').classList.remove('hidden');
+    }
+
+    function closeCategoryModal() {
+      document.getElementById('category-modal').classList.add('hidden');
+      document.getElementById('new-cat-name').value = '';
+    }
+
+    function createNewCategory(e) {
+      e.preventDefault();
+      const name = document.getElementById('new-cat-name').value.trim();
+      if (!name) return;
+
+      const newCat = {
+        id: `cat-${Math.random().toString(36).substr(2, 9)}`,
+        merchant_id: state.activeTenantId,
+        name
+      };
+      state.categories.push(newCat);
+      saveState();
+
+      // Refresh category selector & close
+      switchTenant(state.activeTenantId);
+      document.getElementById('add-prod-category').value = newCat.id;
+      closeCategoryModal();
+    }
+
+    function createNewProduct(e) {
+      e.preventDefault();
+      const name = document.getElementById('add-prod-name').value;
+      const mrp = parseFloat(document.getElementById('add-prod-mrp').value);
+      const selling_price = parseFloat(document.getElementById('add-prod-selling-price').value);
+      const desc = document.getElementById('add-prod-desc').value;
+      const category_id = document.getElementById('add-prod-category').value;
+      let img = document.getElementById('add-prod-image').value;
+
+      if (isNaN(mrp) || mrp <= 0) {
+        alert("MRP must be greater than 0");
+        return;
+      }
+      if (isNaN(selling_price) || selling_price <= 0) {
+        alert("Selling price must be greater than 0");
+        return;
+      }
+      if (selling_price > mrp) {
+        alert("Selling Price must be less than or equal to MRP");
+        return;
+      }
+
+      if (!img) {
+        img = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80';
+      }
+
+      const newProd = {
+        id: `p-${Math.random().toString(36).substr(2, 9)}`,
+        merchant_id: state.activeTenantId,
+        category_id: category_id || undefined,
+        name,
+        price: selling_price, // compatibility
+        mrp,
+        selling_price,
+        description: desc,
+        image_url: img
+      };
+
+      state.products.push(newProd);
+      saveState();
+
+      // Reset Form
+      document.getElementById('add-product-form').reset();
+      
+      // Refresh forms and client storefront
+      loadProductsForm();
+      calculateMetrics();
+      syncStorefront();
+    }
+
+    function deleteCatalogProduct(id) {
+      state.products = state.products.filter(p => p.id !== id);
+      saveState();
+      loadProductsForm();
+      calculateMetrics();
+      syncStorefront();
+    }
+
+    // ----------------------------------------------------
+    // 7. PAYMENT GATEWAYS FORM
+    // ----------------------------------------------------
+    function loadGatewaysForm() {
+      const gws = state.gateways[state.activeTenantId] || { stripe: { active: false, publicKey: '' }, proxy_hook: { active: false, webhookUrl: '', secret: '' } };
+      
+      document.getElementById('gate-stripe-active').checked = gws.stripe.active;
+      document.getElementById('gate-stripe-key').value = gws.stripe.publicKey;
+      
+      document.getElementById('gate-proxy-active').checked = gws.proxy_hook.active;
+      document.getElementById('gate-proxy-url').value = gws.proxy_hook.webhookUrl;
+      document.getElementById('gate-proxy-secret').value = gws.proxy_hook.secret;
+    }
+
+    function toggleGateway(type, active) {
+      const gws = state.gateways[state.activeTenantId];
+      
+      // Deactivate other if toggling on (exclusivity for demo simplicity)
+      if (active) {
+        Object.keys(gws).forEach(k => {
+          gws[k].active = (k === type);
+        });
+      } else {
+        gws[type].active = false;
+      }
+      
+      saveState();
+      loadGatewaysForm();
+    }
+
+    function saveGatewayKey(type, val) {
+      const gws = state.gateways[state.activeTenantId];
+      gws[type].publicKey = val;
+      saveState();
+    }
+
+    function saveGatewayCredentials(type, field, val) {
+      const gws = state.gateways[state.activeTenantId];
+      gws[type][field] = val;
+      saveState();
+    }
+
+    // ----------------------------------------------------
+    // 8. BUSINESS METRICS ENGINE (RLS CALCULATED VALUES)
+    // ----------------------------------------------------
+    function calculateMetrics() {
+      const tenantId = state.activeTenantId;
+      const tenantOrders = state.orders.filter(o => o.merchant_id === tenantId && o.order_status === 'paid');
+      const tenantEvents = state.analyticsEvents.filter(e => e.merchant_id === tenantId);
+
+      const totalRevenue = tenantOrders.reduce((sum, o) => sum + o.order_total, 0);
+      const uniqueSessions = new Set(tenantEvents.map(e => e.session_id)).size || 1;
+      const purchaseCount = tenantOrders.length;
+      
+      const convRate = uniqueSessions > 0 ? (purchaseCount / uniqueSessions) * 100 : 0;
+      const aov = purchaseCount > 0 ? totalRevenue / purchaseCount : 0;
+
+      // Update Dashboard elements
+      document.getElementById('stat-revenue').innerText = formatPrice(totalRevenue);
+      document.getElementById('stat-conversion').innerText = `${convRate.toFixed(2)}%`;
+      document.getElementById('stat-aov').innerText = formatPrice(aov);
+      document.getElementById('stat-sessions').innerText = uniqueSessions;
+
+      // Render chart bars
+      const chartContainer = document.getElementById('chart-bars');
+      chartContainer.innerHTML = '';
+      
+      // Simulate weekly segments
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const baseRev = totalRevenue / 4;
+      
+      days.forEach((day, idx) => {
+        const heightPct = Math.max(12, Math.min(95, 25 + (idx * 15) % 65 + (baseRev > 0 ? 10 : 0)));
+        const barValue = baseRev > 0 ? (heightPct * totalRevenue / 300).toFixed(0) : 0;
+        
+        const column = document.createElement('div');
+        column.className = 'flex flex-col items-center space-y-1.5 flex-1';
+        column.innerHTML = `
+          <span class="text-[8px] text-zinc-500 font-mono">${formatPrice(parseFloat(barValue))}</span>
+          <div class="w-5 bg-gradient-to-t from-emerald-600 to-teal-400 rounded-t" style="height: ${heightPct}px"></div>
+          <span class="text-[9px] text-zinc-400">${day}</span>
+        `;
+        chartContainer.appendChild(column);
+      });
+
+      // Render top products lists
+      const topProductsList = document.getElementById('top-products-list');
+      topProductsList.innerHTML = '';
+      
+      const tenantProducts = state.products.filter(p => p.merchant_id === tenantId);
+      
+      if (tenantProducts.length === 0) {
+        topProductsList.innerHTML = '<span class="text-zinc-500 text-xs">No product activity</span>';
+        return;
+      }
+
+      // Sort by mock views (simulated index)
+      const topProds = tenantProducts.slice(0, 3).map((p, i) => ({
+        ...p,
+        views: 18 - (i * 4) + (tenantOrders.length * 2)
+      }));
+
+      topProds.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between text-xs py-1.5 border-b border-zinc-800/60';
+        row.innerHTML = `
+          <div class="flex items-center space-x-2 truncate">
+            <img src="${p.image_url}" alt="" class="w-7 h-7 object-cover rounded">
+            <span class="font-semibold text-zinc-300 truncate">${p.name}</span>
+          </div>
+          <span class="text-[10px] bg-emerald-950 border border-emerald-900 text-emerald-400 px-2 py-0.5 rounded-full font-mono font-semibold">${p.views} views</span>
+        `;
+        topProductsList.appendChild(row);
+      });
+    }
+
+    // ----------------------------------------------------
+    // 9. CLIENT STOREFRONT RENDERING ENGINE
+    // ----------------------------------------------------
+    function syncStorefrontTheme() {
+      const config = state.storefrontConfigs[state.activeTenantId];
+      const sandbox = document.getElementById('storefront-sandbox');
+      
+      // Inject CSS variables
+      sandbox.style.setProperty('--primary-color', config.theme.primary_color);
+      sandbox.style.setProperty('--secondary-color', config.theme.secondary_color);
+      sandbox.style.setProperty('--font-family', config.theme.font_family);
+      sandbox.style.setProperty('--border-radius', config.theme.border_radius);
+
+      // Apply font class
+      sandbox.style.fontFamily = `"${config.theme.font_family}", 'Inter', sans-serif`;
+      sandbox.style.backgroundColor = config.theme.secondary_color;
+      
+      // Theme matching for chatbot primary button colors
+      document.getElementById('chatbot-toggle-btn').style.backgroundColor = config.theme.primary_color;
+    }
+
+    function syncStorefront() {
+      syncStorefrontTheme();
+      const config = state.storefrontConfigs[state.activeTenantId];
+      const tenantProducts = state.products.filter(p => p.merchant_id === state.activeTenantId);
+      const app = document.getElementById('sf-app');
+      
+      // Header Navigation Links
+      let navHTML = '';
+      config.navigation.forEach(nav => {
+        const tenantCats = state.categories.filter(c => c.merchant_id === state.activeTenantId);
+        const isActive = (nav.link === '/' && !state.activeCategory) ||
+                         (nav.link !== '/' && state.activeCategory === nav.link) ||
+                         (tenantCats.find(c => c.id === state.activeCategory)?.name.toLowerCase() === nav.label.toLowerCase());
+        const activeClass = isActive ? 'text-black font-bold border-b-2 border-zinc-900 pb-1' : 'text-zinc-600 hover:text-black';
+        navHTML += `<a href="${nav.link}" onclick="event.preventDefault(); handleStorefrontNavClick('${nav.link}', '${nav.label}')" class="text-xs font-semibold ${activeClass} transition">${nav.label}</a>`;
+      });
+
+      // Render Layout Sections
+      let sectionsHTML = '';
+      config.sections.forEach(sect => {
+        if (!sect.visible) return;
+
+        if (sect.type === 'hero') {
+          if (state.activeCategory) return; // Hide hero when a specific category is active
+          sectionsHTML += `
+            <section class="relative h-64 overflow-hidden shadow-sm flex items-center" style="border-radius: var(--border-radius, 0.5rem)">
+              <img src="${sect.settings.image_url}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-60">
+              <div class="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div>
+              <div class="relative z-10 px-8 py-6 space-y-4 max-w-sm">
+                <h2 class="text-xl md:text-2xl font-extrabold text-white leading-tight">${sect.title}</h2>
+                <button class="px-4 py-2 bg-white text-zinc-950 text-xs font-bold transition hover:bg-zinc-100" style="border-radius: var(--border-radius, 0.5rem)">
+                  ${sect.settings.cta_text}
+                </button>
+              </div>
+            </section>
+          `;
+        } else if (sect.type === 'product_grid') {
+          const colsVal = sect.settings.columns || 3;
+          const limitVal = sect.settings.limit || 6;
+          
+          let gridColsClass = 'grid-cols-2';
+          if (colsVal === 3) gridColsClass = 'grid-cols-3';
+          if (colsVal === 4) gridColsClass = 'grid-cols-4';
+
+          let productsCardsHTML = '';
+          const filteredProds = state.activeCategory
+            ? tenantProducts.filter(p => p.category_id === state.activeCategory)
+            : tenantProducts;
+          const displayProds = filteredProds.slice(0, limitVal);
+
+          if (displayProds.length === 0) {
+            productsCardsHTML = '<div class="col-span-full py-12 text-center text-zinc-400 text-xs">Catalog workspace empty</div>';
+          } else {
+            displayProds.forEach(p => {
+              productsCardsHTML += `
+                <div class="bg-white border border-zinc-200 overflow-hidden flex flex-col justify-between" style="border-radius: var(--border-radius, 0.5rem)">
+                  <div class="relative h-36 bg-zinc-50 border-b border-zinc-100">
+                    <img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover">
+                  </div>
+                  <div class="p-3 flex-1 flex flex-col justify-between space-y-3">
+                    <div>
+                      <h4 class="font-bold text-xs text-zinc-900 truncate">${p.name}</h4>
+                      <p class="text-[10px] text-zinc-500 mt-0.5 line-clamp-2 leading-relaxed">${p.description}</p>
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                      <span class="text-xs font-bold font-mono text-zinc-900">
+                        ${formatPrice(p.selling_price ?? p.price)}
+                        ${(p.mrp ?? p.price) > (p.selling_price ?? p.price) ? `<span class="text-[10px] text-zinc-400 line-through font-normal ml-1.5">${formatPrice(p.mrp ?? p.price)}</span>` : ''}
+                      </span>
+                      <button onclick="addToCart('${p.id}')" class="text-[9px] font-bold text-white px-2.5 py-1.5 transition" style="background-color: var(--primary-color, #0f172a); border-radius: var(--border-radius, 0.25rem)">
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            });
+          }
+
+          sectionsHTML += `
+            <section class="space-y-4">
+              <div class="border-b border-zinc-200 pb-2">
+                <h3 class="text-sm font-bold tracking-tight text-zinc-800">${sect.title}</h3>
+              </div>
+              <div class="grid gap-4 ${gridColsClass}">
+                ${productsCardsHTML}
+              </div>
+            </section>
+          `;
+        }
+      });
+
+      app.innerHTML = `
+        <!-- Header -->
+        <header class="bg-white/80 border-b border-zinc-200 px-5 py-3 sticky top-0 z-20 flex items-center justify-between">
+          <span class="font-extrabold text-sm tracking-tight" style="color: var(--primary-color)">${state.merchants.find(m => m.id === state.activeTenantId).name}</span>
+          <div class="flex items-center space-x-4">
+            <nav class="hidden sm:flex space-x-4">
+              ${navHTML}
+            </nav>
+            <button onclick="toggleCartDrawer(true)" class="flex items-center space-x-1.5 text-white px-3 py-1.5 text-[10px] font-bold transition" style="background-color: var(--primary-color); border-radius: var(--border-radius)">
+              <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
+              <span id="cart-btn-label">Cart (0)</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="flex-1 p-5 space-y-8">
+          ${sectionsHTML}
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-zinc-900 text-zinc-400 py-6 px-5 border-t border-zinc-800 text-[10px] text-center space-y-2 shrink-0">
+          <p>© 2026 ${state.merchants.find(m => m.id === state.activeTenantId).name}. All rights reserved.</p>
+          <p class="text-zinc-500 font-mono">Secure adapter channels: Stripe / Proxy Redirect</p>
+        </footer>
+      `;
+
+      lucide.createIcons();
+      updateCartBadge();
+    }
+
+    function handleStorefrontNavClick(link, label) {
+      if (link === '/') {
+        state.activeCategory = null;
+      } else {
+        const normLabel = label.toLowerCase();
+        const normLink = link.toLowerCase().replace('/', '');
+        const tenantCats = state.categories.filter(c => c.merchant_id === state.activeTenantId);
+        const foundCat = tenantCats.find(c => 
+          c.name.toLowerCase() === normLabel || 
+          c.name.toLowerCase().includes(normLabel) ||
+          normLabel.includes(c.name.toLowerCase()) ||
+          c.name.toLowerCase().replace(/\s+/g, '-') === normLink
+        );
+        if (foundCat) {
+          state.activeCategory = foundCat.id;
+        } else {
+          state.activeCategory = link;
+        }
+      }
+      saveState();
+      syncStorefront();
+    }
+
+    // ----------------------------------------------------
+    // 10. SHOPPING CART LOGIC (STOREFRONT)
+    // ----------------------------------------------------
+    function updateCartBadge() {
+      const count = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+      const label = document.getElementById('cart-btn-label');
+      if (label) label.innerText = `Cart (${count})`;
+    }
+
+    function toggleCartDrawer(open) {
+      const drawer = document.getElementById('cart-drawer');
+      if (open) {
+        drawer.classList.remove('hidden');
+        renderCartItems();
+      } else {
+        drawer.classList.add('hidden');
+      }
+    }
+
+    function addToCart(productId) {
+      const product = state.products.find(p => p.id === productId);
+      if (!product) return;
+
+      const existing = state.cart.find(item => item.productId === productId);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        state.cart.push({
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: 1,
+          imageUrl: product.image_url
+        });
+      }
+
+      // Record analytics
+      state.analyticsEvents.push({
+        merchant_id: state.activeTenantId,
+        event_type: 'add_to_cart',
+        session_id: 'visitor-sess-preview'
+      });
+      saveState();
+
+      updateCartBadge();
+      toggleCartDrawer(true);
+      calculateMetrics();
+    }
+
+    function removeFromCart(productId) {
+      state.cart = state.cart.filter(item => item.productId !== productId);
+      saveState();
+      renderCartItems();
+      updateCartBadge();
+    }
+
+    function renderCartItems() {
+      const list = document.getElementById('cart-items-list');
+      list.innerHTML = '';
+      
+      let subtotal = 0;
+      state.cart.forEach(item => {
+        subtotal += item.price * item.quantity;
+        const row = document.createElement('div');
+        row.className = 'flex space-x-3 p-2 bg-zinc-50 rounded-lg border border-zinc-150 text-xs';
+        row.innerHTML = `
+          <img src="${item.imageUrl}" alt="" class="w-12 h-12 object-cover rounded">
+          <div class="flex-1 flex flex-col justify-between">
+            <div>
+              <h5 class="font-bold text-zinc-900 line-clamp-1">${item.name}</h5>
+              <span class="text-[10px] text-zinc-500 font-mono">${formatPrice(item.price)} × ${item.quantity}</span>
+            </div>
+            <button onclick="removeFromCart('${item.productId}')" class="text-[10px] text-red-500 hover:text-red-650 font-semibold self-start mt-1">Remove</button>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+
+      if (state.cart.length === 0) {
+        list.innerHTML = '<div class="text-center py-12 text-zinc-400 text-xs">Cart is empty</div>';
+      }
+
+      document.getElementById('cart-subtotal-val').innerText = formatPrice(subtotal);
+    }
+
+    // ----------------------------------------------------
+    // 11. CHECKOUT GATEWAYS ROUTER ADAPTER
+    // ----------------------------------------------------
+    function initializeCheckoutFlow() {
+      toggleCartDrawer(false);
+      
+      const gws = state.gateways[state.activeTenantId];
+      const modal = document.getElementById('checkout-modal');
+      const content = document.getElementById('checkout-modal-content');
+      
+      // Compute totals
+      const totalAmount = state.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      
+      // Locate active gateway
+      let activeGate = 'stripe';
+      if (gws.proxy_hook.active) activeGate = 'proxy_hook';
+      
+      modal.classList.remove('hidden');
+      content.innerHTML = '';
+
+      if (activeGate === 'stripe') {
+        const key = gws.stripe.publicKey || 'pk_test_solara';
+        // Render Headless Stripe Elements
+        content.innerHTML = `
+          <div class="border-b border-zinc-100 pb-2">
+            <h4 class="text-sm font-extrabold text-zinc-900 uppercase tracking-wider flex items-center">
+              <span class="w-2.5 h-2.5 bg-indigo-500 rounded-full mr-2"></span> Secure Credit Card Checkout
+            </h4>
+            <p class="text-[10px] text-zinc-400 mt-0.5">Stripe Elements Payment Adapter Session</p>
+          </div>
+          
+          <form onsubmit="submitStripeSim(event, ${totalAmount})" class="space-y-3.5">
+            <div class="bg-zinc-50 border border-zinc-200 rounded-lg p-3 space-y-2">
+              <div>
+                <label class="block text-[9px] uppercase font-bold text-zinc-400 mb-0.5">Card Number</label>
+                <input type="text" required placeholder="4242 4242 4242 4242" class="w-full bg-white border border-zinc-200 rounded-md px-2.5 py-1 text-xs text-zinc-800 focus:outline-none focus:border-indigo-500">
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[9px] uppercase font-bold text-zinc-400 mb-0.5">Expiry Date</label>
+                  <input type="text" required placeholder="MM / YY" class="w-full bg-white border border-zinc-200 rounded-md px-2.5 py-1 text-xs text-zinc-800 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-[9px] uppercase font-bold text-zinc-400 mb-0.5">CVC Code</label>
+                  <input type="text" required placeholder="321" class="w-full bg-white border border-zinc-200 rounded-md px-2.5 py-1 text-xs text-zinc-800 focus:outline-none">
+                </div>
+              </div>
+            </div>
+            
+            <button type="submit" id="stripe-auth-btn" class="w-full py-2.5 bg-indigo-650 hover:bg-indigo-600 bg-indigo-600 text-white font-bold text-xs tracking-wider uppercase rounded-lg transition duration-200">
+              Authorize Payment ${formatPrice(totalAmount)}
+            </button>
+          </form>
+        `;
+      } else {
+        const url = gws.proxy_hook.webhookUrl || 'https://client-erp.com/webhook';
+        // Render Proxy webhook elements
+        content.innerHTML = `
+          <div class="border-b border-zinc-100 pb-2">
+            <h4 class="text-sm font-extrabold text-zinc-900 uppercase tracking-wider flex items-center">
+              <span class="w-2.5 h-2.5 bg-teal-500 rounded-full mr-2"></span> Proxy Webhook Dispatch
+            </h4>
+            <p class="text-[10px] text-zinc-400 mt-0.5">External Routing Hook Adapter Session</p>
+          </div>
+          
+          <div class="space-y-4 text-center py-2">
+            <div class="w-12 h-12 bg-teal-50 rounded-full flex items-center justify-center text-teal-600 mx-auto text-xl animate-pulse">
+              <i data-lucide="arrow-right-left"></i>
+            </div>
+            <div>
+              <h5 class="text-xs font-bold text-zinc-800">Relaying cart contents to webhook:</h5>
+              <code class="text-[9px] bg-zinc-100 px-2 py-1 rounded block mt-1 font-mono text-teal-600 break-all select-all">${url}</code>
+            </div>
+            
+            <button onclick="submitProxySim(${totalAmount})" class="w-full py-2.5 bg-teal-500 hover:bg-teal-600 text-zinc-950 font-bold text-xs tracking-wider uppercase rounded-lg transition">
+              Dispatch Signed Webhook & Complete
+            </button>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+    }
+
+    function closeCheckoutModal() {
+      document.getElementById('checkout-modal').classList.add('hidden');
+    }
+
+    function submitStripeSim(e, amount) {
+      e.preventDefault();
+      const btn = document.getElementById('stripe-auth-btn');
+      btn.innerText = 'Authorizing elements...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        // Find or create a guest customer for this merchant in preview
+        let guestCust = state.customers.find(c => c.email === 'guest@example.com' && c.merchant_id === state.activeTenantId);
+        if (!guestCust) {
+          guestCust = {
+            customer_id: `cust-guest-${Math.random().toString(36).substr(2, 6)}`,
+            name: 'Guest Buyer',
+            email: 'guest@example.com',
+            phone: '+15550001111',
+            merchant_id: state.activeTenantId,
+            created_at: new Date().toISOString()
+          };
+          state.customers.push(guestCust);
+        }
+
+        // Log transaction in database
+        state.orders.push({
+          order_id: `o-st-${Math.random().toString(36).substr(2, 6)}`,
+          customer_id: guestCust.customer_id,
+          merchant_id: state.activeTenantId,
+          order_total: amount,
+          order_status: 'paid',
+          itemsCount: state.cart.length,
+          created_at: new Date().toISOString()
+        });
+
+        // Log analytics event
+        state.analyticsEvents.push({
+          merchant_id: state.activeTenantId,
+          event_type: 'purchase_complete',
+          session_id: 'visitor-sess-preview'
+        });
+
+        state.cart = [];
+        saveState();
+        updateCartBadge();
+        calculateMetrics();
+        syncStorefront();
+
+        // Render success Screen
+        const content = document.getElementById('checkout-modal-content');
+        content.innerHTML = `
+          <div class="text-center py-6 space-y-3.5">
+            <div class="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-500 text-2xl mx-auto">✓</div>
+            <h4 class="text-base font-extrabold text-zinc-900">Payment Authorization Succeeded!</h4>
+            <p class="text-xs text-zinc-500">Transaction processed via mock Stripe payment adapter. Tenant metrics updated.</p>
+            <button onclick="closeCheckoutModal()" class="w-full py-2 bg-zinc-900 text-white text-xs font-bold rounded-lg">Done</button>
+          </div>
+        `;
+      }, 1500);
+    }
+
+    function submitProxySim(amount) {
+      // Simulate external webhook sign and complete
+      const url = state.gateways[state.activeTenantId].proxy_hook.webhookUrl;
+      const secret = state.gateways[state.activeTenantId].proxy_hook.secret;
+      
+      const signature = `sha256=mock_sig_${Math.random().toString(36).substr(2, 10)}`;
+
+      alert(`Payload Dispatched to: ${url}\n\nHMAC Signature: ${signature}\n\nMerchant systems confirmed checkout capture!`);
+
+      // Find or create a guest customer for this merchant in preview
+      let guestCust = state.customers.find(c => c.email === 'guest@example.com' && c.merchant_id === state.activeTenantId);
+      if (!guestCust) {
+        guestCust = {
+          customer_id: `cust-guest-${Math.random().toString(36).substr(2, 6)}`,
+          name: 'Guest Buyer',
+          email: 'guest@example.com',
+          phone: '+15550001111',
+          merchant_id: state.activeTenantId,
+          created_at: new Date().toISOString()
+        };
+        state.customers.push(guestCust);
+      }
+
+      // Log transaction
+      state.orders.push({
+        order_id: `o-pr-${Math.random().toString(36).substr(2, 6)}`,
+        customer_id: guestCust.customer_id,
+        merchant_id: state.activeTenantId,
+        order_total: amount,
+        order_status: 'paid',
+        itemsCount: state.cart.length,
+        created_at: new Date().toISOString()
+      });
+
+      // Log analytics
+      state.analyticsEvents.push({
+        merchant_id: state.activeTenantId,
+        event_type: 'purchase_complete',
+        session_id: 'visitor-sess-preview'
+      });
+
+      state.cart = [];
+      saveState();
+      updateCartBadge();
+      calculateMetrics();
+      syncStorefront();
+
+      closeCheckoutModal();
+    }
+
+    // ----------------------------------------------------
+    // 12. MULTI-TENANT ISOLATED AI SEARCH CHATBOT
+    // ----------------------------------------------------
+    function toggleChatWindow(open) {
+      const win = document.getElementById('chatbot-window');
+      if (open) {
+        win.classList.remove('hidden');
+        win.classList.add('flex');
+        renderChatMessages();
+      } else {
+        win.classList.add('hidden');
+        win.classList.remove('flex');
+      }
+    }
+
+    function renderChatMessages() {
+      const container = document.getElementById('chatbot-messages');
+      container.innerHTML = '';
+      
+      const history = state.chatHistory[state.activeTenantId] || [];
+      const activeMerch = state.merchants.find(m => m.id === state.activeTenantId);
+
+      // Chat Header update
+      document.getElementById('chatbot-header-title').innerText = `${activeMerch.name} Guide`;
+
+      history.forEach(msg => {
+        const bubble = document.createElement('div');
+        bubble.className = `flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`;
+        
+        let suggsHTML = '';
+        if (msg.suggestions && msg.suggestions.length > 0) {
+          suggsHTML += '<div class="mt-2.5 pt-2 border-t border-zinc-800 space-y-1.5">';
+          msg.suggestions.forEach(p => {
+            suggsHTML += `
+              <div class="flex items-center justify-between p-1.5 bg-zinc-900 rounded border border-zinc-850">
+                <div class="flex items-center space-x-1.5 truncate">
+                  <img src="${p.image_url}" alt="" class="w-6 h-6 object-cover rounded">
+                  <span class="text-[10px] text-zinc-300 font-semibold truncate max-w-[120px]">${p.name}</span>
+                </div>
+                <button onclick="addToCart('${p.id}')" class="bg-emerald-500 text-zinc-950 font-bold px-2 py-0.5 rounded text-[9px] hover:bg-emerald-600 transition">
+                  + Add
+                </button>
+              </div>
+            `;
+          });
+          suggsHTML += '</div>';
+        }
+
+        bubble.innerHTML = `
+          <div class="px-3 py-2 max-w-[85%] leading-relaxed ${msg.sender === 'user' ? 'bg-zinc-800 text-zinc-100 rounded-xl rounded-tr-none' : 'bg-zinc-900 text-zinc-200 border border-zinc-800 rounded-xl rounded-tl-none'}">
+            <div>${msg.text}</div>
+            ${suggsHTML}
+          </div>
+          <span class="text-[8px] text-zinc-500 mt-1 px-1 font-mono">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+        `;
+        container.appendChild(bubble);
+      });
+
+      // Scroll to bottom
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function sendMessageToAssistant(e) {
+      e.preventDefault();
+      const input = document.getElementById('chatbot-input');
+      const val = input.value.trim();
+      if (!val) return;
+
+      const tenantId = state.activeTenantId;
+      const activeMerch = state.merchants.find(m => m.id === tenantId);
+
+      // Save user message
+      state.chatHistory[tenantId].push({
+        sender: 'user',
+        text: val,
+        timestamp: new Date()
+      });
+
+      input.value = '';
+      renderChatMessages();
+
+      // Show typing indicator simulation
+      const container = document.getElementById('chatbot-messages');
+      const indicator = document.createElement('div');
+      indicator.id = 'chat-indicator';
+      indicator.className = 'flex items-center space-x-1.5 text-zinc-500 py-2';
+      indicator.innerHTML = '<span class="text-[10px]">Scanning database vector spaces</span> <span class="w-1 h-1 bg-zinc-500 rounded-full animate-bounce"></span><span class="w-1 h-1 bg-zinc-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>';
+      container.appendChild(indicator);
+      container.scrollTop = container.scrollHeight;
+
+      setTimeout(() => {
+        const ind = document.getElementById('chat-indicator');
+        if (ind) ind.remove();
+
+        // SEMANTIC SEARCH VECTOR SIMULATION
+        // First filter by merchant_id to simulate tenant isolation
+        const tenantProducts = state.products.filter(p => p.merchant_id === tenantId);
+        
+        // Compute search matches
+        const queryTokens = val.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+        let matches = [];
+
+        if (queryTokens.length > 0) {
+          matches = tenantProducts.map(p => {
+            let score = 0;
+            const name = p.name.toLowerCase();
+            const desc = p.description.toLowerCase();
+            queryTokens.forEach(t => {
+              if (name.includes(t)) score += 0.5;
+              if (desc.includes(t)) score += 0.2;
+            });
+            return { ...p, score };
+          })
+          .filter(p => p.score > 0.1)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 2);
+        }
+
+        let reply = '';
+        if (matches.length > 0) {
+          reply = `I performed an isolated vector similarity search on **${activeMerch.name}** databases and resolved these semantic matches:`;
+        } else {
+          reply = `I searched the product tables for **${activeMerch.name}**, but no products matched your query. Please note that database Row-Level Security restricts my search strictly to ${activeMerch.name}'s inventory. How else can I assist you?`;
+        }
+
+        state.chatHistory[tenantId].push({
+          sender: 'assistant',
+          text: reply,
+          suggestions: matches,
+          timestamp: new Date()
+        });
+
+        saveState();
+        renderChatMessages();
+      }, 1000);
+    }
+
+    // ----------------------------------------------------
+    // 13. INSTANT ONBOARDING WIZARD
+    // ----------------------------------------------------
+    function openOnboardModal() {
+      document.getElementById('onboard-modal').classList.remove('hidden');
+    }
+
+    function closeOnboardModal() {
+      document.getElementById('onboard-modal').classList.add('hidden');
+    }
+
+    function onboardNewTenant(e) {
+      e.preventDefault();
+      const name = document.getElementById('ob-store-name').value;
+      const slug = document.getElementById('ob-store-slug').value.toLowerCase().replace(/\s+/g, '-');
+      
+      const newId = `m-${Math.random().toString(36).substr(2, 6)}`;
+      
+      // Onboard merchant
+      state.merchants.push({ id: newId, name, slug });
+      
+      // Provision Default configuration
+      state.storefrontConfigs[newId] = {
+        theme: {
+          primary_color: '#3b82f6',
+          secondary_color: '#eff6ff',
+          font_family: 'Outfit',
+          border_radius: '0.75rem'
+        },
+        navigation: [
+          { label: 'Home', link: '/' },
+          { label: 'Products', link: '/shop' }
+        ],
+        sections: [
+          {
+            id: `hero-${newId}`,
+            type: 'hero',
+            title: `Discover ${name}`,
+            visible: true,
+            settings: {
+              cta_text: 'Shop Featured Catalog',
+              cta_link: '/shop',
+              image_url: 'https://images.unsplash.com/photo-1472851294608-062f824d296e?auto=format&fit=crop&w=1200&q=80'
+            }
+          },
+          {
+            id: `grid-${newId}`,
+            type: 'product_grid',
+            title: 'Store Arrivals',
+            visible: true,
+            settings: { limit: 4, columns: 2 }
+          }
+        ]
+      };
+
+      // Add default category
+      const defaultCatId = `cat-${Math.random().toString(36).substr(2, 6)}`;
+      state.categories.push({
+        id: defaultCatId,
+        merchant_id: newId,
+        name: 'Signature Collection'
+      });
+
+      // Add default product
+      state.products.push({
+        id: `p-${Math.random().toString(36).substr(2, 6)}`,
+        merchant_id: newId,
+        category_id: defaultCatId,
+        name: `${name} Premium Signature`,
+        description: 'Our benchmark classic item constructed from the finest materials.',
+        price: 59.00,
+        mrp: 69.00,
+        selling_price: 59.00,
+        image_url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80'
+      });
+
+      // Add payment gateways config
+      state.gateways[newId] = {
+        stripe: { active: true, publicKey: `pk_test_${newId}` },
+        proxy_hook: { active: false, webhookUrl: '', secret: '' }
+      };
+
+      // Log analytics
+      state.analyticsEvents.push({
+        merchant_id: newId,
+        event_type: 'view_item',
+        session_id: 'onboard-sess'
+      });
+
+      saveState();
+      
+      // Re-init options and switch
+      init();
+      closeOnboardModal();
+      
+      switchTenant(newId);
+    }
+
+    // ----------------------------------------------------
+    // 14. TAB TOGGLE NAVIGATION (MERCHANT DASHBOARD)
+    // ----------------------------------------------------
+    function showTab(tabName) {
+      // Hide all tabs
+      const tabs = ['analytics', 'branding', 'navigation', 'layout', 'products', 'orders', 'customers', 'platform', 'gateways'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        document.getElementById(`btn-tab-${t}`).className = 'w-full flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200';
+      });
+
+      // Show selected tab
+      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+      document.getElementById(`btn-tab-${tabName}`).className = 'w-full flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition text-emerald-400 bg-zinc-800/80';
+    }
+
+    // Initialize Page
+    window.onload = init;
+  </script>
+</body>
+</html>
