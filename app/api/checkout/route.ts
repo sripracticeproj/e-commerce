@@ -7,7 +7,7 @@ import { ProxyHookPaymentAdapter } from '../../../lib/payments/proxy-adapter';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { merchantId, cartItems, totalAmount, sessionId } = body;
+    const { merchantId, cartItems, totalAmount, sessionId, selectedGateway } = body;
 
     if (!merchantId || !cartItems || !totalAmount) {
       return NextResponse.json({ error: 'Missing required checkout fields' }, { status: 400 });
@@ -16,7 +16,9 @@ export async function POST(request: Request) {
     // 1. Resolve payment gateway configuration from the partition database
     // For local mock simulation, we query using mockDb
     const gateways = mockDb.getPaymentGateways(merchantId, merchantId);
-    const activeGateway = gateways.find(gw => gw.active);
+    const activeGateway = selectedGateway 
+      ? gateways.find(gw => gw.active && gw.gateway_type === selectedGateway)
+      : gateways.find(gw => gw.active);
 
     if (!activeGateway) {
       return NextResponse.json({ error: 'No active payment gateway configured for this merchant.' }, { status: 400 });

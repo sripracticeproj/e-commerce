@@ -11,7 +11,7 @@ interface StorefrontPageProps {
 
 export default function StorefrontPage({ params }: StorefrontPageProps) {
   return (
-    <div className="bg-zinc-950 min-h-screen">
+    <div className="bg-zinc-950 h-screen overflow-y-auto">
       <CustomerStorefront merchantSlug={params.slug} />
     </div>
   );

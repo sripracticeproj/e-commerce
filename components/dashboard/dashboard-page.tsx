@@ -1,14 +1,90 @@
 // Step 4: Merchant Dashboard Configuration View
 import React, { useState, useEffect } from 'react';
 import { mockDb } from '../../lib/mock-db';
-import { StorefrontConfig, Product, PaymentGatewayConfig, Order, Customer } from '../../types';
+import { StorefrontConfig, Product, PaymentGatewayConfig, Order, Customer, MerchantAdminAccount } from '../../types';
+import { toast } from '../ui/toast';
+import { AnalyticsReports } from './analytics-reports';
 
 interface DashboardProps {
   merchantId: string;
+  currentAdminId?: string;
 }
 
-export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'branding' | 'navigation' | 'layout' | 'gateways' | 'products' | 'orders' | 'customers'>('analytics');
+const PRESETS = [
+  {
+    id: 'slate',
+    name: 'Minimalist Slate',
+    primary: '#18181B',
+    secondary: '#FAFAFA',
+    text: '#18181B',
+    font: 'Inter',
+    radius: '0.25rem',
+    btnBg: '#18181B',
+    btnText: '#FFFFFF',
+    headerBg: '#FFFFFF',
+    cardBg: '#FFFFFF',
+    desc: 'Slate tones with sharp styling.'
+  },
+  {
+    id: 'botanical',
+    name: 'Organic Botanical',
+    primary: '#0D9488',
+    secondary: '#F0FDFA',
+    text: '#115E59',
+    font: 'Playfair Display',
+    radius: '1.0rem',
+    btnBg: '#0D9488',
+    btnText: '#FFFFFF',
+    headerBg: '#FFFFFF',
+    cardBg: '#F0FDFA',
+    desc: 'Teals and rounded corners.'
+  },
+  {
+    id: 'amber',
+    name: 'Warm Amber',
+    primary: '#B45309',
+    secondary: '#FFFBEB',
+    text: '#78350F',
+    font: 'Outfit',
+    radius: '0.75rem',
+    btnBg: '#D97706',
+    btnText: '#FFFFFF',
+    headerBg: '#FFFFFF',
+    cardBg: '#FEF3C7',
+    desc: 'Cozy autumn warm tones.'
+  },
+  {
+    id: 'neon',
+    name: 'Retro Neon',
+    primary: '#D946EF',
+    secondary: '#0F172A',
+    text: '#F8FAFC',
+    font: 'Roboto',
+    radius: '0rem',
+    btnBg: '#D946EF',
+    btnText: '#0F172A',
+    headerBg: '#1E293B',
+    cardBg: '#1E293B',
+    desc: 'Dark background with neon pink.'
+  },
+  {
+    id: 'royal',
+    name: 'Royal Gold',
+    primary: '#D97706',
+    secondary: '#0F172A',
+    text: '#F8FAFC',
+    font: 'Playfair Display',
+    radius: '0.5rem',
+    btnBg: '#D97706',
+    btnText: '#0F172A',
+    headerBg: '#1E293B',
+    cardBg: '#1E293B',
+    desc: 'Navy and luxury gold elements.'
+  }
+];
+
+export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId, currentAdminId }) => {
+  const [activeTab, setActiveTab] = useState<'analytics' | 'branding' | 'navigation' | 'layout' | 'gateways' | 'products' | 'orders' | 'customers' | 'users'>('analytics');
   const [config, setConfig] = useState<StorefrontConfig | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -28,6 +104,15 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
   const [newProdCategory, setNewProdCategory] = useState('');
   const [newProdImg, setNewProdImg] = useState('');
 
+  // Form states for product editing
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editProdName, setEditProdName] = useState('');
+  const [editProdDesc, setEditProdDesc] = useState('');
+  const [editProdMRP, setEditProdMRP] = useState('');
+  const [editProdSellingPrice, setEditProdSellingPrice] = useState('');
+  const [editProdCategory, setEditProdCategory] = useState('');
+  const [editProdImg, setEditProdImg] = useState('');
+
   // Category modal states
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -38,12 +123,94 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
   const [proxyActive, setProxyActive] = useState(false);
   const [proxyUrl, setProxyUrl] = useState('');
   const [proxySecret, setProxySecret] = useState('');
+  const [codActive, setCodActive] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState('');
 
   // Customer creation form state
   const [newCustName, setNewCustName] = useState('');
   const [newCustEmail, setNewCustEmail] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
   const [showCustModal, setShowCustModal] = useState(false);
+
+  // Form states for merchant user management
+  const [storeUsers, setStoreUsers] = useState<MerchantAdminAccount[]>([]);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'owner' | 'admin' | 'editor'>('admin');
+
+  // Form states for editing merchant user
+  const [editingUser, setEditingUser] = useState<MerchantAdminAccount | null>(null);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [editUserName, setEditUserName] = useState('');
+  const [editUserEmail, setEditUserEmail] = useState('');
+  const [editUserPassword, setEditUserPassword] = useState('');
+  const [editUserRole, setEditUserRole] = useState<'owner' | 'admin' | 'editor'>('admin');
+
+  // Theme configuration states
+  const [primaryColor, setPrimaryColor] = useState('');
+  const [secondaryColor, setSecondaryColor] = useState('');
+  const [fontFamily, setFontFamily] = useState('Inter');
+  const [borderRadius, setBorderRadius] = useState('0.5rem');
+  const [textColor, setTextColor] = useState('#18181B');
+  const [fontSize, setFontSize] = useState('base');
+  const [buttonBgColor, setButtonBgColor] = useState('#18181B');
+  const [buttonTextColor, setButtonTextColor] = useState('#FFFFFF');
+  const [headerBgColor, setHeaderBgColor] = useState('#FFFFFF');
+  const [cardBgColor, setCardBgColor] = useState('#FFFFFF');
+  const [themePreset, setThemePreset] = useState('slate');
+  const [lastLoadedMerchantId, setLastLoadedMerchantId] = useState('');
+  const [orderIdFormat, setOrderIdFormat] = useState('yyyymmdd000<seq_No>');
+  const [selectedDetailedOrder, setSelectedDetailedOrder] = useState<Order | null>(null);
+
+  const applyPreset = (presetId: string) => {
+    const p = PRESETS.find(pr => pr.id === presetId);
+    if (p) {
+      setPrimaryColor(p.primary);
+      setSecondaryColor(p.secondary);
+      setTextColor(p.text);
+      setFontFamily(p.font);
+      setBorderRadius(p.radius);
+      setButtonBgColor(p.btnBg);
+      setButtonTextColor(p.btnText);
+      setHeaderBgColor(p.headerBg);
+      setCardBgColor(p.cardBg);
+      setThemePreset(p.id);
+    }
+  };
+
+  const handleSaveTheme = () => {
+    console.log('[Theme Save Debug] Clicked handleSaveTheme. merchantId:', merchantId, 'config:', config);
+    if (!config) {
+      console.warn('[Theme Save Debug] config is null! Returning early.');
+      return;
+    }
+    const updatedConfig: StorefrontConfig = {
+      ...config,
+      theme: {
+        primary_color: primaryColor,
+        secondary_color: secondaryColor,
+        font_family: fontFamily,
+        border_radius: borderRadius,
+        text_color: textColor,
+        font_size: fontSize,
+        button_bg_color: buttonBgColor,
+        button_text_color: buttonTextColor,
+        header_bg_color: headerBgColor,
+        card_bg_color: cardBgColor,
+        theme_preset: themePreset
+      }
+    };
+    console.log('[Theme Save Debug] Saving config:', updatedConfig);
+    try {
+      saveConfig(updatedConfig);
+      console.log('[Theme Save Debug] saveConfig completed successfully.');
+      toast.success('Storefront branding settings saved successfully.');
+    } catch (e) {
+      console.error('[Theme Save Debug] Error inside saveConfig:', e);
+    }
+  };
 
   useEffect(() => {
     const loadData = () => {
@@ -53,6 +220,21 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
       }
       const currentConfig = mockDb.getStorefrontConfig(merchantId);
       setConfig(currentConfig);
+
+      if (currentConfig && (merchantId !== lastLoadedMerchantId)) {
+        setPrimaryColor(currentConfig.theme.primary_color || '#18181B');
+        setSecondaryColor(currentConfig.theme.secondary_color || '#FAFAFA');
+        setFontFamily(currentConfig.theme.font_family || 'Inter');
+        setBorderRadius(currentConfig.theme.border_radius || '0.5rem');
+        setTextColor(currentConfig.theme.text_color || '#18181B');
+        setFontSize(currentConfig.theme.font_size || 'base');
+        setButtonBgColor(currentConfig.theme.button_bg_color || '#18181B');
+        setButtonTextColor(currentConfig.theme.button_text_color || '#FFFFFF');
+        setHeaderBgColor(currentConfig.theme.header_bg_color || '#FFFFFF');
+        setCardBgColor(currentConfig.theme.card_bg_color || '#FFFFFF');
+        setThemePreset(currentConfig.theme.theme_preset || 'slate');
+        setLastLoadedMerchantId(merchantId);
+      }
 
       const currentCategories = mockDb.getCategories(merchantId);
       setCategories(currentCategories);
@@ -79,6 +261,10 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
         setProxyUrl(proxy.credentials.webhookUrl || '');
         setProxySecret(proxy.credentials.secret || '');
       }
+      const cod = gate.find(g => g.gateway_type === 'cod');
+      if (cod) {
+        setCodActive(cod.active);
+      }
 
       const calculatedMetrics = mockDb.getDashboardMetrics(merchantId, merchantId);
       setMetrics(calculatedMetrics);
@@ -87,10 +273,21 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
       if (currencyConf) {
         setCurrencyCode(currencyConf.currency_code);
         setCurrencySymbol(currencyConf.currency_code === 'INR' ? '₹' : currencyConf.currency_code === 'EUR' ? '€' : '$');
+        if (!selectedCurrency) {
+          setSelectedCurrency(currencyConf.currency_code);
+        }
+        setOrderIdFormat(currencyConf.order_id_format || 'yyyymmdd000<seq_No>');
       } else {
         setCurrencyCode('USD');
         setCurrencySymbol('$');
+        if (!selectedCurrency) {
+          setSelectedCurrency('USD');
+        }
+        setOrderIdFormat('yyyymmdd000<seq_No>');
       }
+
+      const currentStoreUsers = mockDb.getMerchantAdmins(merchantId);
+      setStoreUsers(currentStoreUsers);
     };
 
     loadData();
@@ -98,7 +295,10 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
     return () => clearInterval(interval);
   }, [merchantId]);
 
-  const formatPrice = (amount: number) => `${currencySymbol}${amount.toFixed(2)}`;
+  const formatPrice = (amount: number | null | undefined) => {
+    const val = typeof amount === 'number' ? amount : parseFloat(amount as any);
+    return isNaN(val) ? `${currencySymbol}0.00` : `${currencySymbol}${val.toFixed(2)}`;
+  };
 
   // Push immediate update to mock database and broadcast via Realtime Engine
   const saveConfig = (newConfig: StorefrontConfig) => {
@@ -170,6 +370,48 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
     setMetrics(mockDb.getDashboardMetrics(merchantId, merchantId));
   };
 
+  const handleUpdateProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    if (!editProdName || !editProdMRP || !editProdSellingPrice) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    const mrpVal = parseFloat(editProdMRP);
+    const sellingPriceVal = parseFloat(editProdSellingPrice);
+
+    if (isNaN(mrpVal) || mrpVal <= 0) {
+      alert("MRP must be greater than 0");
+      return;
+    }
+    if (isNaN(sellingPriceVal) || sellingPriceVal <= 0) {
+      alert("Selling Price must be greater than 0");
+      return;
+    }
+    if (sellingPriceVal > mrpVal) {
+      alert("Selling Price must be less than or equal to MRP");
+      return;
+    }
+
+    try {
+      mockDb.updateProduct(merchantId, merchantId, editingProduct.id, {
+        name: editProdName,
+        description: editProdDesc,
+        mrp: mrpVal,
+        selling_price: sellingPriceVal,
+        category_id: editProdCategory || undefined,
+        image_url: editProdImg || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80'
+      });
+
+      setProducts(mockDb.getProducts(merchantId));
+      setMetrics(mockDb.getDashboardMetrics(merchantId, merchantId));
+      setEditingProduct(null);
+    } catch (err: any) {
+      alert(err.message || "Failed to update product");
+    }
+  };
+
   const handleDeleteProduct = (productId: string) => {
     mockDb.deleteProduct(merchantId, merchantId, productId);
     setProducts(mockDb.getProducts(merchantId));
@@ -180,14 +422,96 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
   const handleSaveGateways = () => {
     mockDb.updatePaymentGateway(merchantId, merchantId, 'stripe', { publicKey: stripePubKey }, stripeActive);
     mockDb.updatePaymentGateway(merchantId, merchantId, 'proxy_hook', { webhookUrl: proxyUrl, secret: proxySecret }, proxyActive);
+    mockDb.updatePaymentGateway(merchantId, merchantId, 'cod', { active: codActive }, codActive);
     setGateways(mockDb.getPaymentGateways(merchantId, merchantId));
-    alert('Payment Gateway configurations saved successfully.');
+    toast.success('Payment Gateway configurations saved successfully.');
+  };
+
+  const handleSaveCurrency = () => {
+    mockDb.updateMerchantConfig(merchantId, merchantId, merchantName, selectedCurrency as 'USD' | 'EUR' | 'INR', orderIdFormat);
+    setCurrencyCode(selectedCurrency);
+    setCurrencySymbol(selectedCurrency === 'INR' ? '₹' : selectedCurrency === 'EUR' ? '€' : '$');
+    toast.success('Store base settings saved successfully.');
+  };
+
+  const handlePrintCourierSlip = (order: Order) => {
+    const cust = customers.find(c => c.customer_id === order.customer_id);
+    let printEl = document.getElementById('print-area-wrapper');
+    if (!printEl) {
+      printEl = document.createElement('div');
+      printEl.id = 'print-area-wrapper';
+      document.body.appendChild(printEl);
+    }
+    
+    const items = order.metadata?.items || [];
+    const itemsListHtml = items.map((item: any) => `
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 10px 0; color: #1e293b;">${item.name}</td>
+        <td style="padding: 10px 0; text-align: center; color: #1e293b;">${item.quantity || item.qty}</td>
+        <td style="padding: 10px 0; text-align: right; font-family: monospace; color: #1e293b;">${formatPrice(item.price || item.selling_price || 0)}</td>
+        <td style="padding: 10px 0; text-align: right; font-family: monospace; color: #1e293b;">${formatPrice((item.price || item.selling_price || 0) * (item.quantity || item.qty || 1))}</td>
+      </tr>
+    `).join('');
+
+    printEl.innerHTML = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: black; padding: 40px; background: white; max-width: 600px; margin: auto; border: 2px solid #000; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="text-align: center; border-bottom: 3px double #000; padding-bottom: 20px; margin-bottom: 25px;">
+          <h2 style="margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px;">${merchantName}</h2>
+          <p style="margin: 6px 0 0 0; font-size: 13px; color: #4b5563; font-weight: 600; letter-spacing: 0.5px;">SHIPPING MANIFEST / COURIER PACKING SLIP</p>
+        </div>
+        
+        <div style="margin-bottom: 25px; font-size: 14px; line-height: 1.5;">
+          <div style="margin-bottom: 6px;"><strong>Order ID:</strong> <span style="font-family: monospace; font-weight: bold; font-size: 15px;">${order.order_id}</span></div>
+          <div style="margin-bottom: 6px;"><strong>Created At:</strong> ${new Date(order.created_at).toLocaleString()}</div>
+          <div style="margin-bottom: 6px;"><strong>Payment Gateway:</strong> <span style="text-transform: uppercase;">${order.payment_gateway}</span></div>
+        </div>
+
+        <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 25px; font-size: 14px; border: 1px solid #e2e8f0; line-height: 1.6;">
+          <strong style="display: block; margin-bottom: 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; color: #475569;">Delivery Information:</strong>
+          <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px; color: #0f172a;">${cust?.name || order.metadata?.customerName || 'Guest Buyer'}</div>
+          <div style="margin-bottom: 4px;"><strong>Contact Phone:</strong> ${cust?.phone || order.metadata?.customerPhone || 'N/A'}</div>
+          <div style="margin-bottom: 4px;"><strong>Email Address:</strong> ${cust?.email || order.metadata?.customerEmail || 'N/A'}</div>
+          <div style="margin-top: 10px; font-size: 14px;">
+            <strong>Shipping Destination:</strong><br/>
+            <span style="font-weight: 500; color: #1e293b;">${order.metadata?.customerAddress || 'N/A'}</span>
+          </div>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 25px;">
+          <thead>
+            <tr style="border-bottom: 2px solid #0f172a; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; color: #475569;">
+              <th style="text-align: left; padding-bottom: 8px;">Product Description</th>
+              <th style="text-align: center; padding-bottom: 8px; width: 60px;">Quantity</th>
+              <th style="text-align: right; padding-bottom: 8px; width: 90px;">Unit Rate</th>
+              <th style="text-align: right; padding-bottom: 8px; width: 90px;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsListHtml}
+          </tbody>
+        </table>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; border-top: 2px solid #0f172a; padding-top: 15px;">
+          <span>Collectable Total:</span>
+          <span style="font-family: monospace; font-size: 18px;">${formatPrice(order.order_total)}</span>
+        </div>
+        
+        <div style="margin-top: 35px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+          <div style="border: 2px solid #0f172a; display: inline-block; padding: 8px 16px; font-family: monospace; font-size: 16px; font-weight: bold; letter-spacing: 1.5px; background: #f1f5f9; text-transform: uppercase; border-radius: 4px;">
+            ORDER STATUS: ${order.order_status}
+          </div>
+          <p style="margin: 0; font-size: 10px; color: #94a3b8;">Courier copy - attach this manifest securely to parcel face</p>
+        </div>
+      </div>
+    `;
+
+    window.print();
   };
 
   if (!config || !metrics) return <div className="p-8 text-zinc-500">Loading multi-tenant console...</div>;
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
+    <div className="flex h-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
       {/* Sidebar Panel */}
       <aside className="w-64 border-r border-zinc-800 bg-zinc-900 flex flex-col justify-between">
         <div>
@@ -262,6 +586,14 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
             >
               Payment Gateways
             </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`w-full flex items-center px-4 py-2.5 rounded-lg text-sm transition-all ${
+                activeTab === 'users' ? 'bg-zinc-800 text-teal-400 font-semibold' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
+              }`}
+            >
+              Store Users
+            </button>
           </nav>
         </div>
         <div className="p-4 border-t border-zinc-800 bg-zinc-950 text-xs text-zinc-500">
@@ -304,6 +636,13 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
               </div>
             </div>
 
+            {/* Custom Interactive SVG Reports & Chart Panels */}
+            <AnalyticsReports
+              merchantId={merchantId}
+              currencySymbol={currencySymbol}
+              formatPrice={formatPrice}
+            />
+
             {/* Top Products View */}
             <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
               <h3 className="text-lg font-bold mb-4">Top Performing Products</h3>
@@ -337,98 +676,340 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
             </div>
           </div>
         )}
-
         {/* TABS: BRANDING SETTINGS */}
         {activeTab === 'branding' && (
-          <div className="space-y-8 animate-fadeIn max-w-2xl">
+          <div className="space-y-8 animate-fadeIn max-w-3xl">
             <div>
-              <h2 className="text-2xl font-bold">Storefront Branding</h2>
-              <p className="text-sm text-zinc-400 mt-1">Define global visual tokens mapping storefront designs.</p>
+              <h2 className="text-2xl font-bold">Storefront Branding & Customization</h2>
+              <p className="text-sm text-zinc-400 mt-1">Define typography, presets, base sizing, and visual palettes mapping your storefront design.</p>
             </div>
             
+            {/* Theme Presets */}
+            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 space-y-4">
+              <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider">Choose Predefined Theme Preset</label>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {PRESETS.map((p) => {
+                  const isSelected = themePreset === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => applyPreset(p.id)}
+                      className={`p-3 rounded-lg border text-left flex flex-col justify-between transition duration-200 ${
+                        isSelected 
+                          ? 'border-teal-500 bg-zinc-800/80 shadow-md shadow-teal-500/10' 
+                          : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700 hover:bg-zinc-800/50'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-bold text-xs text-zinc-100">{p.name}</div>
+                        <div className="flex space-x-1 mt-2">
+                          <span className="w-3.5 h-3.5 rounded-full border border-zinc-700 shadow-sm" style={{ backgroundColor: p.primary }} title="Primary" />
+                          <span className="w-3.5 h-3.5 rounded-full border border-zinc-700 shadow-sm" style={{ backgroundColor: p.secondary }} title="Secondary" />
+                          <span className="w-3.5 h-3.5 rounded-full border border-zinc-700 shadow-sm" style={{ backgroundColor: p.btnBg }} title="Button BG" />
+                          <span className="w-3.5 h-3.5 rounded-full border border-zinc-700 shadow-sm" style={{ backgroundColor: p.headerBg }} title="Header BG" />
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-zinc-400 mt-3 leading-tight font-medium">{p.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="space-y-6 bg-zinc-900 p-6 rounded-xl border border-zinc-800">
-              <div className="grid grid-cols-2 gap-6">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-350 border-b border-zinc-800 pb-2 mb-4">Granular Visual Settings</h3>
+
+              {/* Color Palette Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Primary Theme Color</label>
+                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Primary Color</label>
                   <div className="flex items-center space-x-3">
                     <input
                       type="color"
-                      value={config.theme.primary_color}
-                      onChange={(e) => saveConfig({
-                        ...config,
-                        theme: { ...config.theme, primary_color: e.target.value }
-                      })}
+                      value={primaryColor}
+                      onChange={(e) => {
+                        setPrimaryColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
                       className="w-10 h-10 bg-transparent rounded cursor-pointer border border-zinc-700"
                     />
                     <input
                       type="text"
-                      value={config.theme.primary_color}
-                      onChange={(e) => saveConfig({
-                        ...config,
-                        theme: { ...config.theme, primary_color: e.target.value }
-                      })}
+                      value={primaryColor}
+                      onChange={(e) => {
+                        setPrimaryColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
                       className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 font-mono"
                     />
                   </div>
                 </div>
+
                 <div>
-                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Secondary/Background Color</label>
+                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Secondary / Background Color</label>
                   <div className="flex items-center space-x-3">
                     <input
                       type="color"
-                      value={config.theme.secondary_color}
-                      onChange={(e) => saveConfig({
-                        ...config,
-                        theme: { ...config.theme, secondary_color: e.target.value }
-                      })}
+                      value={secondaryColor}
+                      onChange={(e) => {
+                        setSecondaryColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
                       className="w-10 h-10 bg-transparent rounded cursor-pointer border border-zinc-700"
                     />
                     <input
                       type="text"
-                      value={config.theme.secondary_color}
-                      onChange={(e) => saveConfig({
-                        ...config,
-                        theme: { ...config.theme, secondary_color: e.target.value }
-                      })}
+                      value={secondaryColor}
+                      onChange={(e) => {
+                        setSecondaryColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
+                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Body Text Color</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="color"
+                      value={textColor}
+                      onChange={(e) => {
+                        setTextColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
+                      className="w-10 h-10 bg-transparent rounded cursor-pointer border border-zinc-700"
+                    />
+                    <input
+                      type="text"
+                      value={textColor}
+                      onChange={(e) => {
+                        setTextColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
+                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Button Background Color</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="color"
+                      value={buttonBgColor}
+                      onChange={(e) => {
+                        setButtonBgColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
+                      className="w-10 h-10 bg-transparent rounded cursor-pointer border border-zinc-700"
+                    />
+                    <input
+                      type="text"
+                      value={buttonBgColor}
+                      onChange={(e) => {
+                        setButtonBgColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
+                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Button Text Color</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="color"
+                      value={buttonTextColor}
+                      onChange={(e) => {
+                        setButtonTextColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
+                      className="w-10 h-10 bg-transparent rounded cursor-pointer border border-zinc-700"
+                    />
+                    <input
+                      type="text"
+                      value={buttonTextColor}
+                      onChange={(e) => {
+                        setButtonTextColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
+                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Header Background Color</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="color"
+                      value={headerBgColor}
+                      onChange={(e) => {
+                        setHeaderBgColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
+                      className="w-10 h-10 bg-transparent rounded cursor-pointer border border-zinc-700"
+                    />
+                    <input
+                      type="text"
+                      value={headerBgColor}
+                      onChange={(e) => {
+                        setHeaderBgColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
+                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Product Card Background Color</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="color"
+                      value={cardBgColor}
+                      onChange={(e) => {
+                        setCardBgColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
+                      className="w-10 h-10 bg-transparent rounded cursor-pointer border border-zinc-700"
+                    />
+                    <input
+                      type="text"
+                      value={cardBgColor}
+                      onChange={(e) => {
+                        setCardBgColor(e.target.value);
+                        setThemePreset('custom');
+                      }}
                       className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 font-mono"
                     />
                   </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Typography Font Family</label>
-                <select
-                  value={config.theme.font_family}
-                  onChange={(e) => saveConfig({
-                    ...config,
-                    theme: { ...config.theme, font_family: e.target.value }
-                  })}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500"
+              {/* Sizing and Fonts Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-zinc-800 pt-6">
+                <div>
+                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Typography Font Family</label>
+                  <select
+                    value={fontFamily}
+                    onChange={(e) => {
+                      setFontFamily(e.target.value);
+                      setThemePreset('custom');
+                    }}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 text-zinc-200"
+                  >
+                    <option value="Inter">Inter (Sans-Serif)</option>
+                    <option value="Playfair Display">Playfair Display (Premium Serif)</option>
+                    <option value="Outfit">Outfit (Geometric Modern)</option>
+                    <option value="Roboto">Roboto (Clean Transitional)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Base Font Size</label>
+                  <select
+                    value={fontSize}
+                    onChange={(e) => {
+                      setFontSize(e.target.value);
+                      setThemePreset('custom');
+                    }}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 text-zinc-200"
+                  >
+                    <option value="sm">Small (14px)</option>
+                    <option value="base">Medium (16px)</option>
+                    <option value="lg">Large (18px)</option>
+                    <option value="xl">Extra Large (20px)</option>
+                  </select>
+                </div>
+
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Component Border Radius</label>
+                  <div className="flex items-center space-x-4">
+                    <input
+                      type="range"
+                      min="0"
+                      max="2"
+                      step="0.125"
+                      value={parseFloat(borderRadius)}
+                      onChange={(e) => {
+                        setBorderRadius(`${e.target.value}rem`);
+                        setThemePreset('custom');
+                      }}
+                      className="flex-1 accent-teal-500"
+                    />
+                    <span className="text-sm font-mono bg-zinc-950 px-3 py-1 rounded border border-zinc-800 text-zinc-200">{borderRadius}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Save Theme Settings Button */}
+              <div className="pt-6 border-t border-zinc-850 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleSaveTheme}
+                  className="px-6 py-2.5 bg-teal-500 hover:bg-teal-600 text-zinc-950 font-bold rounded-lg transition duration-200"
                 >
-                  <option value="Inter">Inter (Sans-Serif)</option>
-                  <option value="Playfair Display">Playfair Display (Premium Serif)</option>
-                  <option value="Outfit">Outfit (Geometric Modern)</option>
-                  <option value="Roboto">Roboto (Clean Transitional)</option>
-                </select>
+                  Save Store Theme Settings
+                </button>
               </div>
 
-              <div>
-                <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Component Border Radius</label>
-                <div className="flex items-center space-x-4">
+              {/* General Store Settings Area */}
+              <div className="border-t border-zinc-800/80 pt-6 mt-6 space-y-4">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-350 border-b border-zinc-800 pb-2 mb-4">General Store Settings</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Merchant Store Title</label>
+                    <input
+                      type="text"
+                      value={merchantName}
+                      onChange={(e) => setMerchantName(e.target.value)}
+                      placeholder="e.g. Aether Minimalist Tech"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 text-zinc-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Store Base Currency</label>
+                    <select
+                      value={selectedCurrency}
+                      onChange={(e) => setSelectedCurrency(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 cursor-pointer text-zinc-200"
+                    >
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="INR">INR (₹)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase text-zinc-400 font-semibold tracking-wider mb-2">Configurable Order ID Format</label>
                   <input
-                    type="range"
-                    min="0"
-                    max="2"
-                    step="0.125"
-                    value={parseFloat(config.theme.border_radius)}
-                    onChange={(e) => saveConfig({
-                      ...config,
-                      theme: { ...config.theme, border_radius: `${e.target.value}rem` }
-                    })}
-                    className="flex-1 accent-teal-500"
+                    type="text"
+                    value={orderIdFormat}
+                    onChange={(e) => setOrderIdFormat(e.target.value)}
+                    placeholder="e.g. yyyymmdd000<seq_No>"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 text-zinc-200 font-mono"
                   />
-                  <span className="text-sm font-mono bg-zinc-950 px-3 py-1 rounded border border-zinc-800">{config.theme.border_radius}</span>
+                  <p className="text-[10px] text-zinc-500 mt-1.5 leading-relaxed">
+                    Placeholders: <code className="text-teal-400">yyyy</code> (Year), <code className="text-teal-400">yy</code> (2-digit Year), <code className="text-teal-400">mm</code> (Month), <code className="text-teal-400">dd</code> (Day), <code className="text-teal-400">&lt;seq_No&gt;</code> or <code className="text-teal-400">&#123;seq&#125;</code> (Auto-incrementing sequence).
+                  </p>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleSaveCurrency}
+                    className="px-6 py-2.5 bg-teal-500 hover:bg-teal-600 text-zinc-955 text-xs font-bold rounded-lg transition"
+                  >
+                    Save General Store Settings
+                  </button>
                 </div>
               </div>
             </div>
@@ -697,15 +1278,48 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="product-image" className="block text-xs text-zinc-400 mb-1">Image URL</label>
-                    <input
-                      id="product-image"
-                      type="text"
-                      placeholder="https://..."
-                      value={newProdImg}
-                      onChange={(e) => setNewProdImg(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-850 rounded px-3 py-2 text-sm focus:outline-none text-zinc-200 font-mono"
-                    />
+                    <label className="block text-xs text-zinc-400 mb-1">Product Image</label>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          placeholder="Paste image URL here..."
+                          value={newProdImg}
+                          onChange={(e) => setNewProdImg(e.target.value)}
+                          className="flex-1 bg-zinc-950 border border-zinc-850 rounded px-3 py-2 text-sm focus:outline-none text-zinc-200 font-mono"
+                        />
+                        <label className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs font-semibold rounded transition cursor-pointer shrink-0">
+                          Upload File
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setNewProdImg(reader.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                      {newProdImg && (
+                        <div className="relative w-full h-24 rounded border border-zinc-800 bg-zinc-955 overflow-hidden flex items-center justify-center">
+                          <img src={newProdImg} alt="Preview" className="h-full object-contain" />
+                          <button
+                            type="button"
+                            onClick={() => setNewProdImg('')}
+                            className="absolute top-1 right-1 px-1.5 py-0.5 bg-red-950/85 hover:bg-red-950 text-red-400 text-[10px] rounded border border-red-900/50"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="product-description" className="block text-xs text-zinc-400 mb-1">Description</label>
@@ -753,12 +1367,28 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
                               </span>
                             </div>
                           </div>
-                          <button
-                            onClick={() => handleDeleteProduct(p.id)}
-                            className="px-3 py-1.5 border border-red-900/50 hover:bg-red-950/20 text-red-400 text-xs rounded transition"
-                          >
-                            Delete
-                          </button>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => {
+                                setEditingProduct(p);
+                                setEditProdName(p.name);
+                                setEditProdDesc(p.description || '');
+                                setEditProdMRP((p.mrp ?? p.price).toString());
+                                setEditProdSellingPrice((p.selling_price ?? p.price).toString());
+                                setEditProdCategory(p.category_id || '');
+                                setEditProdImg(p.image_url || '');
+                              }}
+                              className="px-3 py-1.5 border border-zinc-700 hover:bg-zinc-800 text-teal-400 text-xs rounded transition"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProduct(p.id)}
+                              className="px-3 py-1.5 border border-red-900/50 hover:bg-red-950/20 text-red-400 text-xs rounded transition"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -846,6 +1476,27 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
                 </div>
               </div>
 
+              {/* Cash on Delivery (COD) Gateway Card */}
+              <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                    <span className="font-bold text-zinc-200">Cash on Delivery (COD)</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={codActive}
+                      onChange={(e) => setCodActive(e.target.checked)}
+                      className="rounded accent-teal-500"
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-zinc-400">
+                  Allow customers to place orders without upfront payment. Orders will be marked as pending payment until delivered.
+                </p>
+              </div>
+
               <button
                 onClick={handleSaveGateways}
                 className="w-full py-3 bg-teal-500 hover:bg-teal-600 text-zinc-950 font-bold rounded-lg text-sm transition"
@@ -859,15 +1510,17 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
         {/* TABS: ORDER HISTORY LOGS */}
         {activeTab === 'orders' && (
           <div className="space-y-8 animate-fadeIn">
-            <div>
-              <h2 className="text-2xl font-bold">Order History Logs</h2>
-              <p className="text-sm text-zinc-400 mt-1">Real-time listing of customer orders scoped to this tenant partition.</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold font-sans">Order Management Console</h2>
+                <p className="text-sm text-zinc-400 mt-1">Review transaction status, manage fulfillment logistics, process refunds, and generate courier dispatch manifests.</p>
+              </div>
             </div>
 
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-2xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm text-zinc-400">
-                  <thead className="text-xs uppercase bg-zinc-950 text-zinc-300">
+                  <thead className="text-xs uppercase bg-zinc-955 text-zinc-300">
                     <tr>
                       <th className="px-6 py-3 rounded-l-lg">Order ID</th>
                       <th className="px-6 py-3">Customer Name</th>
@@ -878,56 +1531,61 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((o) => {
-                      const cust = customers.find(c => c.customer_id === o.customer_id);
-                      return (
-                        <tr key={o.order_id} className="border-b border-zinc-800/50 hover:bg-zinc-800/10 transition">
-                          <td className="px-6 py-4 font-mono text-xs text-zinc-200 font-bold">{o.order_id}</td>
-                          <td className="px-6 py-4">
-                            {cust ? (
-                              <div>
-                                <p className="font-semibold text-zinc-200">{cust.name}</p>
-                                <p className="text-[10px] text-zinc-500">{cust.email}</p>
-                              </div>
-                            ) : (
-                              <span className="text-zinc-500 italic">Guest Buyer</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-xs text-zinc-400">{new Date(o.created_at).toLocaleString()}</td>
-                          <td className="px-6 py-4 font-mono font-bold text-teal-400">{formatPrice(o.order_total)}</td>
-                          <td className="px-6 py-4">
-                            <span className={`text-[10px] px-2.5 py-1 rounded-full border font-semibold ${
-                              o.order_status === 'paid' ? 'bg-green-950 text-green-400 border-green-800' :
-                              o.order_status === 'refunded' ? 'bg-indigo-950 text-indigo-400 border-indigo-850' :
-                              o.order_status === 'pending' ? 'bg-amber-950 text-amber-400 border-amber-800' :
-                              'bg-zinc-900 text-zinc-400 border-zinc-700'
-                            }`}>
-                              {o.order_status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            {o.order_status === 'paid' && (
+                    {orders.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center py-10 text-zinc-500 italic">No orders received yet.</td>
+                      </tr>
+                    ) : (
+                      orders.map((o) => {
+                        const cust = customers.find(c => c.customer_id === o.customer_id);
+                        return (
+                          <tr key={o.order_id} className="border-b border-zinc-800/50 hover:bg-zinc-800/10 transition">
+                            <td className="px-6 py-4 font-mono text-xs text-zinc-200 font-bold">{o.order_id}</td>
+                            <td className="px-6 py-4">
+                              {cust ? (
+                                <div>
+                                  <p className="font-semibold text-zinc-200">{cust.name}</p>
+                                  <p className="text-[10px] text-zinc-500 font-mono">{cust.email}</p>
+                                </div>
+                              ) : (
+                                <div>
+                                  <p className="font-semibold text-zinc-200">{o.metadata?.customerName || 'Guest Buyer'}</p>
+                                  <p className="text-[10px] text-zinc-500 font-mono">{o.metadata?.customerEmail || 'N/A'}</p>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-xs text-zinc-400">{new Date(o.created_at).toLocaleString()}</td>
+                            <td className="px-6 py-4 font-mono font-bold text-teal-400">{formatPrice(o.order_total)}</td>
+                            <td className="px-6 py-4">
+                              <span className={`text-[10px] px-2.5 py-1 rounded-full border font-semibold uppercase tracking-wider ${
+                                o.order_status === 'paid' ? 'bg-green-950 text-green-400 border-green-800/50' :
+                                o.order_status === 'refunded' ? 'bg-indigo-950 text-indigo-400 border-indigo-850/50' :
+                                o.order_status === 'pending' ? 'bg-amber-950 text-amber-400 border-amber-800/50' :
+                                o.order_status === 'fulfilled' ? 'bg-teal-950 text-teal-450 border-teal-800/50' :
+                                'bg-red-955/20 text-red-400 border-red-900/50'
+                              }`}>
+                                {o.order_status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right space-x-2">
                               <button
-                                onClick={() => {
-                                  if (confirm(`Refund order ${o.order_id} for ${formatPrice(o.order_total)}?`)) {
-                                    try {
-                                      mockDb.refundOrder(merchantId, merchantId, o.order_id, o.order_total);
-                                      setOrders(mockDb.getOrders(merchantId, merchantId));
-                                      setMetrics(mockDb.getDashboardMetrics(merchantId, merchantId));
-                                    } catch (err: any) {
-                                      alert(err.message || 'Failed to refund order');
-                                    }
-                                  }
-                                }}
-                                className="px-2.5 py-1 bg-red-950/20 hover:bg-red-950/40 border border-red-900/50 text-red-400 text-xs rounded transition"
+                                onClick={() => setSelectedDetailedOrder(o)}
+                                className="px-3 py-1 bg-zinc-800 hover:bg-zinc-750 text-zinc-100 border border-zinc-700 text-xs font-bold rounded-lg transition"
                               >
-                                Refund
+                                Manage
                               </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                              <button
+                                onClick={() => handlePrintCourierSlip(o)}
+                                className="px-3 py-1 bg-zinc-800 hover:bg-zinc-750 text-teal-400 border border-zinc-700 text-xs font-bold rounded-lg transition"
+                                title="Print Courier Manifest Label"
+                              >
+                                Print Slip
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -971,6 +1629,88 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
                         <td className="px-6 py-4 font-mono text-xs text-zinc-350">{c.email}</td>
                         <td className="px-6 py-4 text-zinc-300">{c.phone}</td>
                         <td className="px-6 py-4 text-xs text-zinc-500">{new Date(c.created_at).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TABS: MERCHANT USER MANAGEMENT */}
+        {activeTab === 'users' && (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold">Store User Accounts</h2>
+                <p className="text-sm text-zinc-400 mt-1">Manage admin, owner, and editor accounts authorized for your storefront.</p>
+              </div>
+              <button
+                onClick={() => setShowAddUserModal(true)}
+                className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-zinc-955 text-xs font-bold rounded-lg transition"
+              >
+                + Add Store User
+              </button>
+            </div>
+
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-2xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-zinc-400">
+                  <thead className="text-xs uppercase bg-zinc-955 text-zinc-300">
+                    <tr>
+                      <th className="px-6 py-3 rounded-l-lg">Username</th>
+                      <th className="px-6 py-3">Email Address</th>
+                      <th className="px-6 py-3">Role</th>
+                      <th className="px-6 py-3">Password (Mock)</th>
+                      <th className="px-6 py-3">Created At</th>
+                      <th className="px-6 py-3 rounded-r-lg text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {storeUsers.map((u) => (
+                      <tr key={u.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/10 transition">
+                        <td className="px-6 py-4 font-semibold text-zinc-200">{u.username}</td>
+                        <td className="px-6 py-4 font-mono text-xs text-zinc-350">{u.email}</td>
+                        <td className="px-6 py-4">
+                          <span className="bg-zinc-855 text-teal-400 border border-zinc-750 text-[10px] px-2 py-0.5 rounded font-mono">
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 font-mono text-xs text-zinc-400">{u.password}</td>
+                        <td className="px-6 py-4 text-xs text-zinc-500">{new Date(u.created_at).toLocaleString()}</td>
+                        <td className="px-6 py-4 text-right space-x-2">
+                          <button
+                            onClick={() => {
+                              setEditingUser(u);
+                              setEditUserName(u.username);
+                              setEditUserEmail(u.email);
+                              setEditUserPassword(u.password || '');
+                              setEditUserRole(u.role);
+                              setShowEditUserModal(true);
+                            }}
+                            className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-750 text-teal-400 border border-zinc-700 text-xs font-bold rounded transition"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            disabled={u.id === currentAdminId}
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to delete user ${u.username}?`)) {
+                                mockDb.deleteMerchantAdmin(u.id);
+                                setStoreUsers(mockDb.getMerchantAdmins(merchantId));
+                              }
+                            }}
+                            className={`px-2.5 py-1 text-xs font-bold rounded border transition ${
+                              u.id === currentAdminId 
+                                ? 'bg-zinc-850/50 text-zinc-600 border-zinc-800/50 cursor-not-allowed' 
+                                : 'bg-red-955/20 hover:bg-red-955/40 border-red-900/50 text-red-400'
+                            }`}
+                            title={u.id === currentAdminId ? "Cannot delete yourself" : ""}
+                          >
+                            Delete
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1093,12 +1833,543 @@ export const MerchantDashboard: React.FC<DashboardProps> = ({ merchantId }) => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-teal-500 hover:bg-teal-600 text-zinc-950 rounded text-xs font-bold transition"
+                  className="flex-1 py-2 bg-teal-500 hover:bg-teal-600 text-zinc-955 rounded text-xs font-bold transition"
                 >
                   Create Category
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setEditingProduct(null)} className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+          <div className="relative bg-zinc-900 border border-zinc-800 rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4 text-zinc-200 overflow-y-auto max-h-[90vh]">
+            <div>
+              <h3 className="text-base font-extrabold text-white">Edit Catalog Item</h3>
+              <p className="text-xs text-zinc-400 mt-1">Update details, pricing, and category mapping for this product.</p>
+            </div>
+            
+            <form onSubmit={handleUpdateProduct} className="space-y-4">
+              <div>
+                <label htmlFor="edit-product-name" className="block text-xs text-zinc-400 mb-1">Product Name</label>
+                <input
+                  id="edit-product-name"
+                  type="text"
+                  required
+                  placeholder="e.g. Lavender Sleep Mist"
+                  value={editProdName}
+                  onChange={(e) => setEditProdName(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none text-zinc-200"
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-product-category" className="block text-xs text-zinc-400 mb-1">Category</label>
+                <select
+                  id="edit-product-category"
+                  value={editProdCategory}
+                  onChange={(e) => setEditProdCategory(e.target.value)}
+                  className="w-full bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none text-zinc-200"
+                >
+                  <option value="">Uncategorized</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="edit-product-mrp" className="block text-xs text-zinc-400 mb-1">MRP ({currencySymbol})</label>
+                  <input
+                    id="edit-product-mrp"
+                    type="number"
+                    required
+                    step="0.01"
+                    placeholder="0.00"
+                    value={editProdMRP}
+                    onChange={(e) => setEditProdMRP(e.target.value)}
+                    className="w-full bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none text-zinc-200 font-mono"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-product-selling-price" className="block text-xs text-zinc-400 mb-1">Selling Price ({currencySymbol})</label>
+                  <input
+                    id="edit-product-selling-price"
+                    type="number"
+                    required
+                    step="0.01"
+                    placeholder="0.00"
+                    value={editProdSellingPrice}
+                    onChange={(e) => setEditProdSellingPrice(e.target.value)}
+                    className="w-full bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none text-zinc-200 font-mono"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1">Product Image</label>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      placeholder="Paste image URL here..."
+                      value={editProdImg}
+                      onChange={(e) => setEditProdImg(e.target.value)}
+                      className="flex-1 bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none text-zinc-200 font-mono"
+                    />
+                    <label className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs font-semibold rounded transition cursor-pointer shrink-0">
+                      Upload File
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setEditProdImg(reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  {editProdImg && (
+                    <div className="relative w-full h-24 rounded border border-zinc-800 bg-zinc-955 overflow-hidden flex items-center justify-center">
+                      <img src={editProdImg} alt="Preview" className="h-full object-contain" />
+                      <button
+                        type="button"
+                        onClick={() => setEditProdImg('')}
+                        className="absolute top-1 right-1 px-1.5 py-0.5 bg-red-955/80 hover:bg-red-950 text-red-400 text-[10px] rounded border border-red-900/50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label htmlFor="edit-product-description" className="block text-xs text-zinc-400 mb-1">Description</label>
+                <textarea
+                  id="edit-product-description"
+                  placeholder="Enter description..."
+                  value={editProdDesc}
+                  onChange={(e) => setEditProdDesc(e.target.value)}
+                  className="w-full bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none h-24 resize-none text-zinc-200"
+                />
+              </div>
+              <div className="flex space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="flex-1 py-2 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 rounded text-xs font-bold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 bg-teal-500 hover:bg-teal-600 text-zinc-950 rounded text-xs font-bold transition"
+                >
+                  Save Changes
+                </button>
+              </div>
+             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Store User Modal */}
+      {showAddUserModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setShowAddUserModal(false)} className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+          <div className="relative bg-zinc-900 border border-zinc-800 rounded-xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-zinc-200">
+            <div>
+              <h3 className="text-base font-extrabold text-white">Create Store User</h3>
+              <p className="text-xs text-zinc-400 mt-1">Add a new admin account to manage this merchant store.</p>
+            </div>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!newUserName || !newUserEmail || !newUserPassword) return;
+
+              try {
+                mockDb.addMerchantAdmin(merchantId, newUserEmail, newUserName, newUserPassword, newUserRole);
+                setStoreUsers(mockDb.getMerchantAdmins(merchantId));
+                setNewUserName('');
+                setNewUserEmail('');
+                setNewUserPassword('');
+                setShowAddUserModal(false);
+              } catch (err: any) {
+                alert(err.message || 'Failed to create store user');
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider mb-1">Username</label>
+                <input
+                  type="text"
+                  required
+                  value={newUserName}
+                  onChange={(e) => setNewUserName(e.target.value)}
+                  placeholder="e.g. store_editor"
+                  className="w-full bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 text-zinc-200"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider mb-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  placeholder="user@store.com"
+                  className="w-full bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 text-zinc-200"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 text-zinc-200"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider mb-1">Role Type</label>
+                <select
+                  value={newUserRole}
+                  onChange={(e) => setNewUserRole(e.target.value as any)}
+                  className="w-full bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 text-zinc-200 cursor-pointer"
+                >
+                  <option value="owner">Owner (Full access)</option>
+                  <option value="admin">Admin (Manage settings)</option>
+                  <option value="editor">Editor (Products only)</option>
+                </select>
+              </div>
+              
+              <div className="flex space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddUserModal(false)}
+                  className="flex-1 py-2 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 rounded text-xs font-bold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 bg-teal-500 hover:bg-teal-600 text-zinc-955 rounded text-xs font-bold transition"
+                >
+                  Create User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Store User Modal */}
+      {showEditUserModal && editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => {
+            setShowEditUserModal(false);
+            setEditingUser(null);
+          }} className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+          <div className="relative bg-zinc-900 border border-zinc-800 rounded-xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-zinc-200">
+            <div>
+              <h3 className="text-base font-extrabold text-white">Edit Store User</h3>
+              <p className="text-xs text-zinc-400 mt-1">Modify credentials or role access levels.</p>
+            </div>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!editUserName || !editUserEmail || !editUserPassword) return;
+
+              try {
+                mockDb.updateMerchantAdmin(editingUser.id, {
+                  username: editUserName,
+                  email: editUserEmail,
+                  password: editUserPassword,
+                  role: editUserRole
+                });
+                setStoreUsers(mockDb.getMerchantAdmins(merchantId));
+                setShowEditUserModal(false);
+                setEditingUser(null);
+              } catch (err: any) {
+                alert(err.message || 'Failed to update store user');
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider mb-1">Username</label>
+                <input
+                  type="text"
+                  required
+                  value={editUserName}
+                  onChange={(e) => setEditUserName(e.target.value)}
+                  className="w-full bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 text-zinc-200"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider mb-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={editUserEmail}
+                  onChange={(e) => setEditUserEmail(e.target.value)}
+                  className="w-full bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 text-zinc-200"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider mb-1">Password</label>
+                <input
+                  type="text"
+                  required
+                  value={editUserPassword}
+                  onChange={(e) => setEditUserPassword(e.target.value)}
+                  className="w-full bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 text-zinc-200 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-zinc-400 tracking-wider mb-1">Role Type</label>
+                <select
+                  value={editUserRole}
+                  onChange={(e) => setEditUserRole(e.target.value as any)}
+                  className="w-full bg-zinc-955 border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-teal-500 text-zinc-200 cursor-pointer"
+                >
+                  <option value="owner">Owner (Full access)</option>
+                  <option value="admin">Admin (Manage settings)</option>
+                  <option value="editor">Editor (Products only)</option>
+                </select>
+              </div>
+              
+              <div className="flex space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditUserModal(false);
+                    setEditingUser(null);
+                  }}
+                  className="flex-1 py-2 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 rounded text-xs font-bold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 bg-teal-500 hover:bg-teal-600 text-zinc-955 rounded text-xs font-bold transition"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Detailed Order Management Drawer / Modal */}
+      {selectedDetailedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end font-sans">
+          {/* Modal backdrop */}
+          <div
+            onClick={() => setSelectedDetailedOrder(null)}
+            className="absolute inset-0 bg-zinc-950/70 backdrop-blur-sm transition-opacity"
+          />
+
+          {/* Drawer Body */}
+          <div className="relative w-full max-w-lg bg-zinc-900 h-full border-l border-zinc-800 shadow-2xl flex flex-col justify-between z-10 animate-slideOver text-zinc-100">
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+                <div>
+                  <h3 className="text-lg font-black text-white">Order Details</h3>
+                  <p className="text-xs text-zinc-500 font-mono mt-1">ID: {selectedDetailedOrder.order_id}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedDetailedOrder(null)}
+                  className="text-zinc-400 hover:text-zinc-200 font-bold p-1 text-sm bg-zinc-800 rounded-lg w-7 h-7 flex items-center justify-center border border-zinc-700"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Metadata Summary Cards */}
+              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                <div className="bg-zinc-950 p-3 rounded-lg border border-zinc-850 space-y-1">
+                  <span className="text-[9px] text-zinc-500 uppercase block font-bold">Created At</span>
+                  <span className="text-zinc-300 font-semibold">{new Date(selectedDetailedOrder.created_at).toLocaleString()}</span>
+                </div>
+                <div className="bg-zinc-950 p-3 rounded-lg border border-zinc-850 space-y-1">
+                  <span className="text-[9px] text-zinc-500 uppercase block font-bold">Payment Method</span>
+                  <span className="text-zinc-300 font-semibold uppercase">{selectedDetailedOrder.payment_gateway}</span>
+                </div>
+              </div>
+
+              {/* Customer & Shipping Section */}
+              <div className="bg-zinc-950/80 p-4 rounded-xl border border-zinc-850 space-y-4">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-teal-400 border-b border-zinc-850 pb-2">Customer & Courier Dispatch Details</h4>
+                
+                <div className="grid grid-cols-2 gap-4 text-xs">
+                  <div className="space-y-1">
+                    <span className="text-[9px] text-zinc-500 block font-bold">Name</span>
+                    <span className="text-zinc-200 font-semibold">
+                      {customers.find(c => c.customer_id === selectedDetailedOrder.customer_id)?.name || 
+                       selectedDetailedOrder.metadata?.customerName || 'Guest Buyer'}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[9px] text-zinc-500 block font-bold">Phone Number</span>
+                    <span className="text-zinc-200 font-mono font-semibold">
+                      {customers.find(c => c.customer_id === selectedDetailedOrder.customer_id)?.phone || 
+                       selectedDetailedOrder.metadata?.customerPhone || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-xs space-y-1">
+                  <span className="text-[9px] text-zinc-500 block font-bold">Email Address</span>
+                  <span className="text-zinc-200 font-mono font-semibold">
+                    {customers.find(c => c.customer_id === selectedDetailedOrder.customer_id)?.email || 
+                     selectedDetailedOrder.metadata?.customerEmail || 'N/A'}
+                  </span>
+                </div>
+
+                <div className="text-xs space-y-1 bg-zinc-900 p-3 rounded-lg border border-zinc-800">
+                  <span className="text-[9px] text-zinc-500 block font-bold mb-1">Shipping Address</span>
+                  <span className="text-zinc-200 font-semibold leading-relaxed block">
+                    {selectedDetailedOrder.metadata?.customerAddress || 'No shipping address provided.'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Ordered Items Summary */}
+              <div className="bg-zinc-950/80 p-4 rounded-xl border border-zinc-850 space-y-4">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-teal-400 border-b border-zinc-850 pb-2">Ordered Items Summary</h4>
+                
+                <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+                  {(selectedDetailedOrder.metadata?.items || []).map((item: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-center text-xs bg-zinc-900 p-2.5 rounded border border-zinc-800">
+                      <div className="flex-1 min-w-0 pr-3">
+                        <span className="font-semibold text-zinc-200 block truncate">{item.name}</span>
+                        <span className="text-[10px] text-zinc-500">Rate: {formatPrice(item.price || item.selling_price || 0)} × {item.quantity || item.qty}</span>
+                      </div>
+                      <span className="font-mono font-bold text-teal-400 text-right shrink-0">
+                        {formatPrice((item.price || item.selling_price || 0) * (item.quantity || item.qty || 1))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center text-sm font-bold pt-2 border-t border-zinc-850">
+                  <span className="text-zinc-400">Total Order Amount</span>
+                  <span className="font-mono text-teal-400 text-base">{formatPrice(selectedDetailedOrder.order_total)}</span>
+                </div>
+              </div>
+
+              {/* Current Lifecycle Status */}
+              <div className="bg-zinc-950/80 p-4 rounded-xl border border-zinc-850 flex items-center justify-between">
+                <div>
+                  <span className="text-[9px] text-zinc-500 block font-bold uppercase">Current Order Status</span>
+                  <span className="text-xs font-extrabold uppercase text-white font-mono mt-0.5 block tracking-wider">
+                    {selectedDetailedOrder.order_status}
+                  </span>
+                </div>
+                <span className={`w-3.5 h-3.5 rounded-full border border-zinc-950 shadow animate-pulse ${
+                  selectedDetailedOrder.order_status === 'paid' ? 'bg-green-500' :
+                  selectedDetailedOrder.order_status === 'refunded' ? 'bg-indigo-500' :
+                  selectedDetailedOrder.order_status === 'pending' ? 'bg-amber-500' :
+                  selectedDetailedOrder.order_status === 'fulfilled' ? 'bg-teal-500' : 'bg-red-500'
+                }`} />
+              </div>
+            </div>
+
+            {/* Actions Drawer Footer */}
+            <div className="p-6 border-t border-zinc-800 bg-zinc-955 space-y-3 shrink-0">
+              <button
+                onClick={() => handlePrintCourierSlip(selectedDetailedOrder)}
+                className="w-full py-3 bg-teal-500 hover:bg-teal-600 text-zinc-955 font-bold rounded-xl text-sm transition shadow-lg flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print Courier Manifest Label
+              </button>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Fulfill action */}
+                {(selectedDetailedOrder.order_status === 'pending' || selectedDetailedOrder.order_status === 'paid') ? (
+                  <button
+                    onClick={() => {
+                      try {
+                        mockDb.fulfillOrder(merchantId, merchantId, selectedDetailedOrder.order_id);
+                        const updated = mockDb.getOrders(merchantId, merchantId);
+                        setOrders(updated);
+                        const fresh = updated.find(x => x.order_id === selectedDetailedOrder.order_id);
+                        if (fresh) setSelectedDetailedOrder(fresh);
+                        setMetrics(mockDb.getDashboardMetrics(merchantId, merchantId));
+                        toast.success('Order status successfully marked as FULFILLED.');
+                      } catch (err: any) {
+                        toast.error(err.message || 'Failed to fulfill order');
+                      }
+                    }}
+                    className="py-2.5 bg-zinc-800 hover:bg-zinc-750 text-teal-400 border border-zinc-700 text-xs font-bold rounded-xl transition"
+                  >
+                    Mark Fulfilled
+                  </button>
+                ) : null}
+
+                {/* Refund action */}
+                {selectedDetailedOrder.order_status === 'paid' ? (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Authorize full refund of ${formatPrice(selectedDetailedOrder.order_total)} for this order?`)) {
+                        try {
+                          mockDb.refundOrder(merchantId, merchantId, selectedDetailedOrder.order_id, selectedDetailedOrder.order_total);
+                          const updated = mockDb.getOrders(merchantId, merchantId);
+                          setOrders(updated);
+                          const fresh = updated.find(x => x.order_id === selectedDetailedOrder.order_id);
+                          if (fresh) setSelectedDetailedOrder(fresh);
+                          setMetrics(mockDb.getDashboardMetrics(merchantId, merchantId));
+                          toast.success('Order successfully REFUNDED.');
+                        } catch (err: any) {
+                          toast.error(err.message || 'Failed to refund order');
+                        }
+                      }
+                    }}
+                    className="py-2.5 bg-zinc-800 hover:bg-zinc-750 text-indigo-400 border border-zinc-700 text-xs font-bold rounded-xl transition"
+                  >
+                    Refund Order
+                  </button>
+                ) : null}
+
+                {/* Cancel action */}
+                {(selectedDetailedOrder.order_status === 'pending' || selectedDetailedOrder.order_status === 'paid') ? (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to CANCEL order ${selectedDetailedOrder.order_id}?`)) {
+                        try {
+                          mockDb.cancelOrder(merchantId, merchantId, selectedDetailedOrder.order_id);
+                          const updated = mockDb.getOrders(merchantId, merchantId);
+                          setOrders(updated);
+                          const fresh = updated.find(x => x.order_id === selectedDetailedOrder.order_id);
+                          if (fresh) setSelectedDetailedOrder(fresh);
+                          setMetrics(mockDb.getDashboardMetrics(merchantId, merchantId));
+                          toast.success('Order successfully CANCELLED.');
+                        } catch (err: any) {
+                          toast.error(err.message || 'Failed to cancel order');
+                        }
+                      }
+                    }}
+                    className="py-2.5 bg-red-955/20 hover:bg-red-955/40 text-red-400 border border-red-900/50 text-xs font-bold rounded-xl transition col-span-2"
+                  >
+                    Cancel Order
+                  </button>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
       )}

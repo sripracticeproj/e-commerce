@@ -12,6 +12,13 @@ export interface ThemeConfig {
   secondary_color: string;
   font_family: string;
   border_radius: string;
+  text_color?: string;
+  font_size?: string;
+  button_bg_color?: string;
+  button_text_color?: string;
+  header_bg_color?: string;
+  card_bg_color?: string;
+  theme_preset?: string;
 }
 
 export interface NavigationItem {
@@ -62,6 +69,17 @@ export interface User {
   created_at: string;
 }
 
+export interface MerchantAdminAccount {
+  id: string;
+  merchant_id: string;
+  email: string;
+  username: string;
+  password?: string;
+  role: 'owner' | 'admin' | 'editor';
+  created_at: string;
+}
+
+
 export interface Product {
   id: string;
   merchant_id: string;
@@ -89,6 +107,8 @@ export interface MerchantConfig {
   merchant_id: string;
   merchant_name: string;
   currency_code: 'INR' | 'USD' | 'EUR';
+  order_id_format?: string;
+  last_seq_no?: number;
   created_at: string;
 }
 
@@ -98,7 +118,7 @@ export interface Order {
   merchant_id: string;
   order_total: number;
   order_status: 'pending' | 'paid' | 'fulfilled' | 'cancelled' | 'refunded';
-  payment_gateway: 'stripe' | 'proxy_hook';
+  payment_gateway: 'stripe' | 'proxy_hook' | 'cod';
   metadata: Record<string, any>;
   created_at: string;
 }
@@ -106,7 +126,7 @@ export interface Order {
 export interface PaymentGatewayConfig {
   id: string;
   merchant_id: string;
-  gateway_type: 'stripe' | 'proxy_hook';
+  gateway_type: 'stripe' | 'proxy_hook' | 'cod';
   credentials: Record<string, any>;
   active: boolean;
   created_at: string;

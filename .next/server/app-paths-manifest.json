@@ -1,1 +1,6 @@
-{}
+{
+  "/store/[slug]/page": "app/store/[slug]/page.js",
+  "/merchant/page": "app/merchant/page.js",
+  "/superuser/page": "app/superuser/page.js",
+  "/page": "app/page.js"
+}

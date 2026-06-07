@@ -8,6 +8,12 @@
   --background-end-rgb: 0, 0, 0;
 }
 
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: black;
@@ -42,4 +48,45 @@ body {
 
 .animate-scaleUp {
   animation: scaleUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom Toast slide-in animation */
+@keyframes slideIn {
+  from { transform: translateY(100%) scale(0.95); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Print Overrides */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Hide everything except print-area-wrapper during printing */
+  body > div:not(#print-area-wrapper),
+  body > header,
+  body > main,
+  body > footer,
+  body > aside,
+  #__next > div:not(#print-area-wrapper) {
+    display: none !important;
+  }
+  
+  #print-area-wrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    visibility: visible !important;
+  }
 }

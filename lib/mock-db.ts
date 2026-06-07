@@ -9,8 +9,32 @@ import {
   CartItem,
   Category,
   Customer,
-  MerchantConfig
+  MerchantConfig,
+  MerchantAdminAccount
 } from '../types';
+
+function generateFormattedOrderId(format: string, seqNo: number): string {
+  const now = new Date();
+  const yyyy = now.getFullYear().toString();
+  const yy = yyyy.slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  
+  let result = format;
+  result = result.replace(/yyyy/g, yyyy);
+  result = result.replace(/yy/g, yy);
+  result = result.replace(/mm/g, mm);
+  result = result.replace(/dd/g, dd);
+  
+  if (result.includes('<seq_No>')) {
+    result = result.replace(/<seq_No>/g, String(seqNo));
+  } else if (result.includes('{seq}')) {
+    result = result.replace(/\{seq\}/g, String(seqNo));
+  } else {
+    result = result + String(seqNo);
+  }
+  return result;
+}
 
 // Pre-defined mockup data
 const DEFAULT_MERCHANTS: Merchant[] = [
@@ -24,6 +48,36 @@ const DEFAULT_MERCHANTS: Merchant[] = [
     id: 'm2-aether-tech',
     name: 'Aether Minimalist Tech',
     slug: 'aether',
+    created_at: new Date('2026-02-15').toISOString()
+  }
+];
+
+const DEFAULT_MERCHANT_ADMINS: MerchantAdminAccount[] = [
+  {
+    id: 'admin-superuser',
+    merchant_id: 'platform-master',
+    email: 'super@platform.com',
+    username: 'superuser',
+    password: 'password123',
+    role: 'owner',
+    created_at: new Date('2026-01-01').toISOString()
+  },
+  {
+    id: 'admin-solara',
+    merchant_id: 'm1-solara-wellness',
+    email: 'admin@solara.com',
+    username: 'solara_admin',
+    password: 'password123',
+    role: 'admin',
+    created_at: new Date('2026-01-10').toISOString()
+  },
+  {
+    id: 'admin-aether',
+    merchant_id: 'm2-aether-tech',
+    email: 'admin@aether.com',
+    username: 'aether_admin',
+    password: 'password123',
+    role: 'admin',
     created_at: new Date('2026-02-15').toISOString()
   }
 ];
@@ -167,7 +221,14 @@ const DEFAULT_STOREFRONT_CONFIGS: Record<string, StorefrontConfig> = {
       primary_color: '#0D9488', // Teal
       secondary_color: '#F0FDFA', // Light teal background
       font_family: 'Playfair Display',
-      border_radius: '1rem'
+      border_radius: '1rem',
+      text_color: '#115e59',
+      font_size: 'base',
+      button_bg_color: '#0D9488',
+      button_text_color: '#ffffff',
+      header_bg_color: '#ffffff',
+      card_bg_color: '#f0fdfa',
+      theme_preset: 'botanical'
     },
     navigation: [
       { label: 'Home', link: '/' },
@@ -203,7 +264,14 @@ const DEFAULT_STOREFRONT_CONFIGS: Record<string, StorefrontConfig> = {
       primary_color: '#18181B', // Slate Zinc
       secondary_color: '#FAFAFA', // Off-white
       font_family: 'Inter',
-      border_radius: '0.25rem'
+      border_radius: '0.25rem',
+      text_color: '#27272a',
+      font_size: 'base',
+      button_bg_color: '#18181B',
+      button_text_color: '#ffffff',
+      header_bg_color: '#ffffff',
+      card_bg_color: '#ffffff',
+      theme_preset: 'slate'
     },
     navigation: [
       { label: 'Home', link: '/' },
@@ -246,10 +314,26 @@ const DEFAULT_GATEWAYS: PaymentGatewayConfig[] = [
     created_at: new Date().toISOString()
   },
   {
+    id: 'gw-solara-cod',
+    merchant_id: 'm1-solara-wellness',
+    gateway_type: 'cod',
+    credentials: { active: true },
+    active: true,
+    created_at: new Date().toISOString()
+  },
+  {
     id: 'gw-aether-1',
     merchant_id: 'm2-aether-tech',
     gateway_type: 'proxy_hook',
     credentials: { webhookUrl: 'https://api.aethertech.com/v1/webhook', secret: 'aether_secret_key' },
+    active: true,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'gw-aether-cod',
+    merchant_id: 'm2-aether-tech',
+    gateway_type: 'cod',
+    credentials: { active: true },
     active: true,
     created_at: new Date().toISOString()
   }
@@ -375,6 +459,7 @@ class MockDatabase {
   private analyticsEvents: AnalyticsEvent[] = [];
   private customers: Customer[] = [];
   private merchantConfigs: MerchantConfig[] = [];
+  private merchantAdmins: MerchantAdminAccount[] = [];
   private initialized = false;
 
   constructor() {
@@ -396,6 +481,50 @@ class MockDatabase {
           this.analyticsEvents = parsed.analyticsEvents;
           this.customers = parsed.customers || [];
           this.merchantConfigs = parsed.merchantConfigs || [];
+          this.merchantAdmins = parsed.merchantAdmins || [...DEFAULT_MERCHANT_ADMINS];
+
+          // Ensure superuser is always present in database context for demo/testing
+          const hasSuperuser = this.merchantAdmins.some(a => a.username === 'superuser');
+          if (!hasSuperuser) {
+            this.merchantAdmins.push({
+              id: 'admin-superuser',
+              merchant_id: 'platform-master',
+              email: 'super@platform.com',
+              username: 'superuser',
+              password: 'password123',
+              role: 'owner',
+              created_at: new Date('2026-01-01').toISOString()
+            });
+            this.save();
+          }
+
+          // Ensure default COD gateways exist
+          if (this.gateways) {
+            const hasSolaraCOD = this.gateways.some(g => g.merchant_id === 'm1-solara-wellness' && g.gateway_type === 'cod');
+            if (!hasSolaraCOD) {
+              this.gateways.push({
+                id: 'gw-solara-cod',
+                merchant_id: 'm1-solara-wellness',
+                gateway_type: 'cod',
+                credentials: { active: true },
+                active: true,
+                created_at: new Date().toISOString()
+              });
+            }
+            const hasAetherCOD = this.gateways.some(g => g.merchant_id === 'm2-aether-tech' && g.gateway_type === 'cod');
+            if (!hasAetherCOD) {
+              this.gateways.push({
+                id: 'gw-aether-cod',
+                merchant_id: 'm2-aether-tech',
+                gateway_type: 'cod',
+                credentials: { active: true },
+                active: true,
+                created_at: new Date().toISOString()
+              });
+            }
+            this.save();
+          }
+
           this.initialized = true;
           return;
         } catch (e) {
@@ -412,6 +541,7 @@ class MockDatabase {
     this.analyticsEvents = [...DEFAULT_ANALYTICS];
     this.customers = [...DEFAULT_CUSTOMERS];
     this.merchantConfigs = [...DEFAULT_MERCHANT_CONFIGS];
+    this.merchantAdmins = [...DEFAULT_MERCHANT_ADMINS];
     this.initialized = true;
     this.save();
   }
@@ -427,7 +557,8 @@ class MockDatabase {
         gateways: this.gateways,
         analyticsEvents: this.analyticsEvents,
         customers: this.customers,
-        merchantConfigs: this.merchantConfigs
+        merchantConfigs: this.merchantConfigs,
+        merchantAdmins: this.merchantAdmins
       }));
     }
   }
@@ -532,13 +663,96 @@ class MockDatabase {
     return true;
   }
 
+  updateProduct(authMerchantId: string, merchantId: string, productId: string, updatedData: Partial<Product>) {
+    this.assertRLS(authMerchantId, merchantId);
+    const product = this.products.find(p => p.id === productId && p.merchant_id === merchantId);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    if (updatedData.mrp !== undefined) {
+      if (updatedData.mrp <= 0) throw new Error("MRP must be greater than 0");
+    }
+    if (updatedData.selling_price !== undefined) {
+      if (updatedData.selling_price <= 0) throw new Error("Selling price must be greater than 0");
+    }
+
+    const finalMRP = updatedData.mrp !== undefined ? updatedData.mrp : product.mrp;
+    const finalSellingPrice = updatedData.selling_price !== undefined ? updatedData.selling_price : product.selling_price;
+
+    if (finalSellingPrice > finalMRP) {
+      throw new Error("Selling price must be less than or equal to MRP");
+    }
+
+    if (updatedData.name !== undefined) product.name = updatedData.name;
+    if (updatedData.description !== undefined) product.description = updatedData.description;
+    if (updatedData.category_id !== undefined) product.category_id = updatedData.category_id;
+    if (updatedData.image_url !== undefined) product.image_url = updatedData.image_url;
+
+    product.mrp = finalMRP;
+    product.selling_price = finalSellingPrice;
+    product.price = finalSellingPrice; // map price to selling_price for backward compatibility
+
+    this.save();
+    return product;
+  }
+
+  // Admin Credentials management (for onboarding and secure login)
+  getMerchantAdmins(merchantId?: string) {
+    if (merchantId) {
+      return this.merchantAdmins.filter(admin => admin.merchant_id === merchantId);
+    }
+    return this.merchantAdmins;
+  }
+
+  addMerchantAdmin(merchantId: string, email: string, username: string, password?: string, role: 'owner' | 'admin' | 'editor' = 'admin') {
+    const newAdmin: MerchantAdminAccount = {
+      id: `admin-${Math.random().toString(36).substr(2, 9)}`,
+      merchant_id: merchantId,
+      email,
+      username,
+      password: password || 'password123',
+      role,
+      created_at: new Date().toISOString()
+    };
+    this.merchantAdmins.push(newAdmin);
+    this.save();
+    return newAdmin;
+  }
+
+  deleteMerchantAdmin(adminId: string) {
+    this.merchantAdmins = this.merchantAdmins.filter(a => a.id !== adminId);
+    this.save();
+    return true;
+  }
+
+  updateMerchantAdmin(adminId: string, updatedData: Partial<MerchantAdminAccount>) {
+    const admin = this.merchantAdmins.find(a => a.id === adminId);
+    if (!admin) throw new Error("Admin user not found");
+    if (updatedData.email !== undefined) admin.email = updatedData.email;
+    if (updatedData.username !== undefined) admin.username = updatedData.username;
+    if (updatedData.password !== undefined) admin.password = updatedData.password;
+    if (updatedData.role !== undefined) admin.role = updatedData.role;
+    this.save();
+    return admin;
+  }
+
+  verifyMerchantAdmin(usernameOrEmail: string, password?: string) {
+    const admin = this.merchantAdmins.find(
+      a => (a.username === usernameOrEmail || a.email === usernameOrEmail)
+    );
+    if (!admin) return null;
+    if (password && admin.password !== password) return null;
+    return admin;
+  }
+
   // Resolves payment gateways configurations (RLS read and write)
   getPaymentGateways(authMerchantId: string, merchantId: string) {
     this.assertRLS(authMerchantId, merchantId);
     return this.gateways.filter(gw => gw.merchant_id === merchantId);
   }
 
-  updatePaymentGateway(authMerchantId: string, merchantId: string, gatewayType: 'stripe' | 'proxy_hook', credentials: Record<string, any>, active: boolean) {
+  updatePaymentGateway(authMerchantId: string, merchantId: string, gatewayType: 'stripe' | 'proxy_hook' | 'cod', credentials: Record<string, any>, active: boolean) {
     this.assertRLS(authMerchantId, merchantId);
     const existing = this.gateways.find(gw => gw.merchant_id === merchantId && gw.gateway_type === gatewayType);
     if (existing) {
@@ -585,7 +799,7 @@ class MockDatabase {
     return this.orders.filter(o => o.merchant_id === merchantId);
   }
 
-  createOrder(merchantId: string, totalAmount: number, gateway: 'stripe' | 'proxy_hook', metadata: Record<string, any>) {
+  createOrder(merchantId: string, totalAmount: number, gateway: 'stripe' | 'proxy_hook' | 'cod', metadata: Record<string, any>) {
     // Generate or fetch a mock customer for the transaction to populate order history cleanly
     let customerId = metadata.customerId;
     if (!customerId) {
@@ -605,8 +819,20 @@ class MockDatabase {
       customerId = customer.customer_id;
     }
 
+    // Retrieve custom order ID format settings or fallback to default
+    let orderId = '';
+    const config = this.getMerchantConfig(merchantId);
+    if (config) {
+      const format = config.order_id_format || 'yyyymmdd000<seq_No>';
+      const nextSeq = (config.last_seq_no || 0) + 1;
+      config.last_seq_no = nextSeq;
+      orderId = generateFormattedOrderId(format, nextSeq);
+    } else {
+      orderId = `ord-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
     const newOrder: Order = {
-      order_id: `ord-${Math.random().toString(36).substr(2, 9)}`,
+      order_id: orderId,
       customer_id: customerId,
       merchant_id: merchantId,
       order_total: totalAmount,
@@ -643,6 +869,24 @@ class MockDatabase {
     };
   }
 
+  cancelOrder(authMerchantId: string, merchantId: string, orderId: string) {
+    this.assertRLS(authMerchantId, merchantId);
+    const order = this.orders.find(o => o.order_id === orderId && o.merchant_id === merchantId);
+    if (!order) throw new Error("Order not found");
+    order.order_status = 'cancelled';
+    this.save();
+    return true;
+  }
+
+  fulfillOrder(authMerchantId: string, merchantId: string, orderId: string) {
+    this.assertRLS(authMerchantId, merchantId);
+    const order = this.orders.find(o => o.order_id === orderId && o.merchant_id === merchantId);
+    if (!order) throw new Error("Order not found");
+    order.order_status = 'fulfilled';
+    this.save();
+    return true;
+  }
+
   // Resolves Customers (RLS read)
   getCustomers(authMerchantId: string, merchantId: string) {
     this.assertRLS(authMerchantId, merchantId);
@@ -673,7 +917,7 @@ class MockDatabase {
     return this.merchantConfigs;
   }
 
-  updateMerchantConfig(authMerchantId: string, merchantId: string, name: string, currencyCode: 'INR' | 'USD' | 'EUR') {
+  updateMerchantConfig(authMerchantId: string, merchantId: string, name: string, currencyCode: 'INR' | 'USD' | 'EUR', orderIdFormat?: string) {
     // RLS: Only merchant context or Super User can alter config
     this.assertRLS(authMerchantId, merchantId);
     
@@ -687,11 +931,16 @@ class MockDatabase {
     if (config) {
       config.merchant_name = name;
       config.currency_code = currencyCode;
+      if (orderIdFormat !== undefined) {
+        config.order_id_format = orderIdFormat;
+      }
     } else {
       config = {
         merchant_id: merchantId,
         merchant_name: name,
         currency_code: currencyCode,
+        order_id_format: orderIdFormat || 'yyyymmdd000<seq_No>',
+        last_seq_no: 0,
         created_at: new Date().toISOString()
       };
       this.merchantConfigs.push(config);
@@ -836,6 +1085,9 @@ export const supabaseClientSim = {
           const config = mockDb.getMerchantConfig(authId);
           return { data: config ? [config] : [], error: null };
         }
+        if (table === 'merchant_admins') {
+          return { data: mockDb.getMerchantAdmins(authId), error: null };
+        }
         return { data: [], error: 'Table not supported' };
       },
       update: async (values: any) => {
@@ -844,7 +1096,7 @@ export const supabaseClientSim = {
           return { data: values, error: null };
         }
         if (table === 'merchant_configurations') {
-          mockDb.updateMerchantConfig(authId, authId, values.merchant_name, values.currency_code);
+          mockDb.updateMerchantConfig(authId, authId, values.merchant_name, values.currency_code, values.order_id_format);
           return { data: values, error: null };
         }
         return { data: null, error: 'Update not supported' };
